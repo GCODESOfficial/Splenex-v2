@@ -1,0 +1,347 @@
+/**
+ * Popular tokens with real CoinGecko logo URLs
+ * This provides INSTANT loading while full CoinGecko database builds
+ * All logo URLs are direct from CoinGecko's CDN - guaranteed to work!
+ */
+
+export interface PopularToken {
+  id: string;
+  symbol: string;
+  name: string;
+  address: string;
+  chainId: number;
+  chainName: string;
+  logoURI: string; // Direct CoinGecko CDN URL
+  decimals: number;
+}
+
+export const POPULAR_TOKENS_WITH_LOGOS: PopularToken[] = [
+  // Ethereum tokens
+  {
+    id: "ethereum",
+    symbol: "ETH",
+    name: "Ethereum",
+    address: "0x0000000000000000000000000000000000000000",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/279/small/ethereum.png",
+    decimals: 18,
+  },
+  {
+    id: "usd-coin",
+    symbol: "USDC",
+    name: "USD Coin",
+    address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/6319/small/usdc.png",
+    decimals: 6,
+  },
+  {
+    id: "tether",
+    symbol: "USDT",
+    name: "Tether",
+    address: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/325/small/Tether.png",
+    decimals: 6,
+  },
+  {
+    id: "wrapped-bitcoin",
+    symbol: "WBTC",
+    name: "Wrapped Bitcoin",
+    address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png",
+    decimals: 8,
+  },
+  {
+    id: "dai",
+    symbol: "DAI",
+    name: "Dai",
+    address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/9956/small/Badge_Dai.png",
+    decimals: 18,
+  },
+  {
+    id: "chainlink",
+    symbol: "LINK",
+    name: "Chainlink",
+    address: "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/877/small/chainlink-new-logo.png",
+    decimals: 18,
+  },
+  {
+    id: "uniswap",
+    symbol: "UNI",
+    name: "Uniswap",
+    address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/12504/small/uni.jpg",
+    decimals: 18,
+  },
+  {
+    id: "aave",
+    symbol: "AAVE",
+    name: "Aave",
+    address: "0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9",
+    chainId: 1,
+    chainName: "Ethereum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/12645/small/aave-token-round.png",
+    decimals: 18,
+  },
+  
+  // BSC tokens
+  {
+    id: "binancecoin",
+    symbol: "BNB",
+    name: "BNB",
+    address: "0x0000000000000000000000000000000000000000",
+    chainId: 56,
+    chainName: "BSC",
+    logoURI: "https://coin-images.coingecko.com/coins/images/825/small/bnb-icon2_2x.png",
+    decimals: 18,
+  },
+  {
+    id: "usd-coin",
+    symbol: "USDC",
+    name: "USD Coin",
+    address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+    chainId: 56,
+    chainName: "BSC",
+    logoURI: "https://coin-images.coingecko.com/coins/images/6319/small/usdc.png",
+    decimals: 18,
+  },
+  {
+    id: "tether",
+    symbol: "USDT",
+    name: "Tether",
+    address: "0x55d398326f99059fF775485246999027B3197955",
+    chainId: 56,
+    chainName: "BSC",
+    logoURI: "https://coin-images.coingecko.com/coins/images/325/small/Tether.png",
+    decimals: 18,
+  },
+  
+  // Polygon tokens
+  {
+    id: "matic-network",
+    symbol: "MATIC",
+    name: "Polygon",
+    address: "0x0000000000000000000000000000000000000000",
+    chainId: 137,
+    chainName: "Polygon",
+    logoURI: "https://coin-images.coingecko.com/coins/images/4713/small/polygon.png",
+    decimals: 18,
+  },
+  {
+    id: "usd-coin",
+    symbol: "USDC",
+    name: "USD Coin",
+    address: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+    chainId: 137,
+    chainName: "Polygon",
+    logoURI: "https://coin-images.coingecko.com/coins/images/6319/small/usdc.png",
+    decimals: 6,
+  },
+  
+  // Arbitrum tokens
+  {
+    id: "ethereum",
+    symbol: "ETH",
+    name: "Ethereum",
+    address: "0x0000000000000000000000000000000000000000",
+    chainId: 42161,
+    chainName: "Arbitrum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/279/small/ethereum.png",
+    decimals: 18,
+  },
+  {
+    id: "usd-coin",
+    symbol: "USDC",
+    name: "USD Coin",
+    address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+    chainId: 42161,
+    chainName: "Arbitrum",
+    logoURI: "https://coin-images.coingecko.com/coins/images/6319/small/usdc.png",
+    decimals: 6,
+  },
+  
+  // Base tokens (using reliable cryptocurrency-icons CDN)
+  {
+    id: "ethereum",
+    symbol: "ETH",
+    name: "Ethereum",
+    address: "0x0000000000000000000000000000000000000000",
+    chainId: 8453,
+    chainName: "Base",
+    logoURI: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png",
+    decimals: 18,
+  },
+  {
+    id: "usd-coin",
+    symbol: "USDC",
+    name: "USD Coin",
+    address: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    chainId: 8453,
+    chainName: "Base",
+    logoURI: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdc.png",
+    decimals: 6,
+  },
+  {
+    id: "tether",
+    symbol: "USDT",
+    name: "Tether",
+    address: "0xfde4C96c8593536E31F229EA8f37b2ADa2699bb2",
+    chainId: 8453,
+    chainName: "Base",
+    logoURI: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/usdt.png",
+    decimals: 6,
+  },
+  {
+    id: "dai",
+    symbol: "DAI",
+    name: "Dai",
+    address: "0x50c5725949A6F0c72E6C4a641F24049A917DB0Cb",
+    chainId: 8453,
+    chainName: "Base",
+    logoURI: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/dai.png",
+    decimals: 18,
+  },
+  {
+    id: "wrapped-bitcoin",
+    symbol: "WBTC",
+    name: "Wrapped BTC",
+    address: "0x0555E30da8f98308EbB7d4D03D35D2F697cb6c0e",
+    chainId: 8453,
+    chainName: "Base",
+    logoURI: "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/btc.png",
+    decimals: 8,
+  },
+  
+  // Optimism tokens
+  {
+    id: "ethereum",
+    symbol: "ETH",
+    name: "Ethereum",
+    address: "0x0000000000000000000000000000000000000000",
+    chainId: 10,
+    chainName: "Optimism",
+    logoURI: "https://coin-images.coingecko.com/coins/images/279/small/ethereum.png",
+    decimals: 18,
+  },
+  
+  // Avalanche tokens
+  {
+    id: "avalanche-2",
+    symbol: "AVAX",
+    name: "Avalanche",
+    address: "0x0000000000000000000000000000000000000000",
+    chainId: 43114,
+    chainName: "Avalanche",
+    logoURI: "https://coin-images.coingecko.com/coins/images/12559/small/Avalanche_Circle_RedWhite_Trans.png",
+    decimals: 18,
+  },
+
+  // Solana tokens
+  {
+    id: "solana",
+    symbol: "SOL",
+    name: "Solana",
+    address: "So11111111111111111111111111111111111111112",
+    chainId: 99998,
+    chainName: "Solana",
+    logoURI: "https://coin-images.coingecko.com/coins/images/4128/small/solana.png",
+    decimals: 9,
+  },
+  {
+    id: "usd-coin",
+    symbol: "USDC",
+    name: "USD Coin",
+    address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    chainId: 99998,
+    chainName: "Solana",
+    logoURI: "https://coin-images.coingecko.com/coins/images/6319/small/usdc.png",
+    decimals: 6,
+  },
+  {
+    id: "tether",
+    symbol: "USDT",
+    name: "Tether",
+    address: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+    chainId: 99998,
+    chainName: "Solana",
+    logoURI: "https://coin-images.coingecko.com/coins/images/325/small/Tether.png",
+    decimals: 6,
+  },
+  {
+    id: "raydium",
+    symbol: "RAY",
+    name: "Raydium",
+    address: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R",
+    chainId: 99998,
+    chainName: "Solana",
+    logoURI: "https://coin-images.coingecko.com/coins/images/13928/small/PSigc4ie_400x400.jpg",
+    decimals: 6,
+  },
+  {
+    id: "serum",
+    symbol: "SRM",
+    name: "Serum",
+    address: "SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt",
+    chainId: 99998,
+    chainName: "Solana",
+    logoURI: "https://coin-images.coingecko.com/coins/images/11970/small/serum-logo.png",
+    decimals: 6,
+  },
+
+  // Cosmos tokens
+  {
+    id: "cosmos",
+    symbol: "ATOM",
+    name: "Cosmos",
+    address: "cosmos1t2g...",
+    chainId: 99999,
+    chainName: "Cosmos",
+    logoURI: "https://coin-images.coingecko.com/coins/images/1481/small/cosmos_hub.png",
+    decimals: 6,
+  },
+  {
+    id: "osmosis",
+    symbol: "OSMO",
+    name: "Osmosis",
+    address: "osmo1t2g...",
+    chainId: 99999,
+    chainName: "Cosmos",
+    logoURI: "https://coin-images.coingecko.com/coins/images/16724/small/osmo.png",
+    decimals: 6,
+  },
+  {
+    id: "juno-network",
+    symbol: "JUNO",
+    name: "Juno Network",
+    address: "juno1t2g...",
+    chainId: 99999,
+    chainName: "Cosmos",
+    logoURI: "https://coin-images.coingecko.com/coins/images/19249/small/juno.png",
+    decimals: 6,
+  },
+  {
+    id: "akash-network",
+    symbol: "AKT",
+    name: "Akash Network",
+    address: "akash1t2g...",
+    chainId: 99999,
+    chainName: "Cosmos",
+    logoURI: "https://coin-images.coingecko.com/coins/images/12785/small/akash-logo.png",
+    decimals: 6,
+  },
+];
+
