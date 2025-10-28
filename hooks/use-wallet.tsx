@@ -309,6 +309,32 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Deduplicate tokens based on symbol + chain + address
+  const deduplicateTokens = (tokens: TokenBalance[]): TokenBalance[] => {
+    const seen = new Map<string, TokenBalance>()
+    
+    for (const token of tokens) {
+      // Create unique key: symbol-chain-address
+      const key = `${token.symbol}-${token.chain}-${token.address.toLowerCase()}`
+      
+      if (!seen.has(key)) {
+        seen.set(key, token)
+      } else {
+        // If duplicate found, keep the one with higher usdValue
+        const existing = seen.get(key)!
+        const existingValue = existing.usdValue || 0
+        const newValue = token.usdValue || 0
+        
+        if (newValue > existingValue) {
+          seen.set(key, token)
+          console.log(`[v0] 🔄 Replacing duplicate ${token.symbol} on ${token.chain} (better USD value)`)
+        }
+      }
+    }
+    
+    return Array.from(seen.values())
+  }
+
   const fetchTokenPrices = async (symbols: string[]): Promise<{ [symbol: string]: number }> => {
     try {
       const symbolsParam = symbols.join(",")
@@ -534,25 +560,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
             nativeName = "FTM"
           }
 
-          const nativeBalance = await getBalanceForChain(walletAddress, cId, chainConfig.rpc)
-          console.log(`[v0] ${chainConfig.name} ${nativeSymbol} balance: ${nativeBalance}`)
-
-          const nativePrices = await fetchTokenPrices([nativeSymbol])
-          const nativePrice = nativePrices[nativeSymbol] || 0
-          const nativeUsdValue = Number.parseFloat(nativeBalance) * nativePrice
-
-          if (Number.parseFloat(nativeBalance) > 0) {
-            allTokenBalances.push({
-              symbol: nativeSymbol,
-              name: `${nativeName} (${chainConfig.name})`,
-              balance: nativeBalance,
-              usdValue: nativeUsdValue,
-              price: nativePrice,
-              address: "native",
-              chain: chainConfig.name,
-            })
-          }
-
+          
           try {
             console.log(`[v0] Trying secure API for ${chainConfig.name} (${chainConfig.moralisChain})...`)
             if (cId !== "0x1") {
@@ -605,48 +613,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 }
               }
 
-              // Universal fallback for popular tokens on all chains
-              console.log(`[v0] 🔍 Checking popular tokens on ${chainConfig.name}...`)
-              await fetchPopularTokensForChain(walletAddress, chainConfig, allTokenBalances)
-
-              try {
-                const usdtEntry = (POPULAR_TOKENS[cId] || []).find(t => t.symbol === "USDT");
-                if (usdtEntry) {
-                  const usdtBal = await getErc20BalanceCrossChain(
-                    usdtEntry.address,
-                    walletAddress,
-                    chainConfig.rpc,
-                    usdtEntry.decimals
-                  );
-              
-                  if (usdtBal > 0) {
-                    const prices = await fetchTokenPrices(["USDT"]);
-                    const usdtPrice = prices["USDT"] || 1;
-                    const usdValue = usdtBal * usdtPrice;
-              
-                    allTokenBalances.push({
-                      symbol: "USDT",
-                      name: `Tether USD (${chainConfig.name})`,
-                      balance: usdtBal.toFixed(6),
-                      usdValue,
-                      price: usdtPrice,
-                      address: usdtEntry.address,
-                      chain: chainConfig.name,
-                    });
-              
-                    console.log(`[v0] ✅ Added explicit USDT balance for ${chainConfig.name}: ${usdtBal}`);
-                  }
-                }
-              } catch (extraErr) {
-                console.warn(`[v0] USDT fallback failed for ${chainConfig.name}:`, extraErr);
-              }
+              // ✅ Moralis only - No popular tokens fallback
             } else {
-              console.log(`[v0] API failed for ${chainConfig.name}, status:`, response.status)
-              await fetchPopularTokensForChain(walletAddress, chainConfig, allTokenBalances)
+              console.log(`[v0] ⚠️ Moralis API failed for ${chainConfig.name}, status: ${response.status}`)
             }
           } catch (apiError) {
-            console.log(`[v0] API error for ${chainConfig.name}, using fallback:`, apiError)
-            await fetchPopularTokensForChain(walletAddress, chainConfig, allTokenBalances)
+            console.log(`[v0] ⚠️ Moralis API error for ${chainConfig.name}:`, apiError)
           }
         } catch (chainError) {
           console.error(`[v0] Error fetching balances for ${chainConfig.name}:`, chainError)
@@ -655,42 +627,46 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
       await Promise.all(chainPromises)
 
-      const total = allTokenBalances.reduce((sum, token) => sum + token.usdValue, 0)
+      // Deduplicate tokens before setting state
+      const deduplicatedTokens = deduplicateTokens(allTokenBalances)
+      console.log(`[v0] 🔄 Deduplication: ${allTokenBalances.length} → ${deduplicatedTokens.length} tokens`)
+      
+      const total = deduplicatedTokens.reduce((sum: number, token: TokenBalance) => sum + token.usdValue, 0)
 
-      console.log(`[v0] 🎯 FINAL RESULT: ${allTokenBalances.length} tokens found`)
+      console.log(`[v0] 🎯 FINAL RESULT: ${deduplicatedTokens.length} tokens found`)
       console.log(`[v0] 💰 Total USD value: $${total.toFixed(2)}`)
-      console.log(`[v0] 📋 Token details:`, allTokenBalances.map(t => `${t.symbol}: ${t.balance} ($${t.usdValue.toFixed(2)}) on ${t.chain}`))
+      console.log(`[v0] 📋 Token details:`, deduplicatedTokens.map((t: TokenBalance) => `${t.symbol}: ${t.balance} ($${t.usdValue.toFixed(2)}) on ${t.chain}`))
       
       // Show tokens grouped by chain
-      const tokensByChain = allTokenBalances.reduce((acc, token) => {
+      const tokensByChain = deduplicatedTokens.reduce((acc: Record<string, TokenBalance[]>, token: TokenBalance) => {
         const chain = token.chain || "Unknown"
         if (!acc[chain]) acc[chain] = []
         acc[chain].push(token)
         return acc
-      }, {} as Record<string, typeof allTokenBalances>)
+      }, {} as Record<string, TokenBalance[]>)
       
       console.log(`[v0] 📊 Tokens by chain:`, Object.entries(tokensByChain).map(([chain, tokens]) => 
-        `${chain}: ${tokens.length} tokens (${tokens.map(t => t.symbol).join(', ')})`
+        `${chain}: ${(tokens as TokenBalance[]).length} tokens (${(tokens as TokenBalance[]).map((t: TokenBalance) => t.symbol).join(', ')})`
       ))
       
       // Show L2 tokens specifically
-      const l2Tokens = allTokenBalances.filter(token => token.chain !== "Ethereum")
+      const l2Tokens = deduplicatedTokens.filter((token: TokenBalance) => token.chain !== "Ethereum")
       if (l2Tokens.length > 0) {
         console.log(`[v0] 🚀 L2 tokens found: ${l2Tokens.length} tokens`)
-        l2Tokens.forEach(token => {
+        l2Tokens.forEach((token: TokenBalance) => {
           console.log(`[v0] 🚀 L2 Token: ${token.symbol} (${token.balance}) on ${token.chain}`)
         })
       } else {
         console.log(`[v0] ⚠️ No L2 tokens found - checking if L2 detection is working properly`)
       }
 
-      setTokenBalances(allTokenBalances)
+      setTokenBalances(deduplicatedTokens)
       setTotalUsdBalance(total)
 
       console.log("[v0] ✅ Multi-chain token balances updated:", {
-        totalTokens: allTokenBalances.length,
+        totalTokens: deduplicatedTokens.length,
         totalUsdValue: total,
-        chains: [...new Set(allTokenBalances.map(t => t.chain))].join(", "),
+        chains: [...new Set(deduplicatedTokens.map((t: TokenBalance) => t.chain))].join(", "),
       })
     } catch (error) {
       console.error("[v0] ❌ Error in fetchAllTokenBalances:", error)
