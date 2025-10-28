@@ -181,93 +181,9 @@ export function useLiFi() {
 
         const txHash = txResponse.hash;
         console.log("[LiFi] Swap transaction sent:", txHash);
-
-        const receipt = await txResponse.wait();
-        console.log("[LiFi] Swap confirmed:", receipt);
-
-        /** --- FIXED: Record Trading Volume with Accurate USD Calculation --- */
-        let usdValue = 0;
         
-        try {
-          const fromToken = quote.action.fromToken;
-          const fromAmount = quote.action.fromAmount;
-          const fromAmountNum = Number.parseFloat(fromAmount) / Math.pow(10, fromToken.decimals);
-          
-          console.log(`[Analytics] 📊 Calculating volume: ${fromAmountNum} ${fromToken.symbol}`);
-          
-          // Method 1: Stablecoins = 1:1 USD (most accurate)
-          const stablecoins = ['USDT', 'USDC', 'DAI', 'BUSD', 'FRAX', 'TUSD', 'USDD', 'GUSD', 'USDP'];
-          if (stablecoins.includes(fromToken.symbol)) {
-            usdValue = fromAmountNum;
-            console.log(`[Analytics] 💵 Stablecoin detected: ${fromToken.symbol} = $${usdValue.toFixed(2)}`);
-          } 
-          // Method 2: Use gas costs USD as price reference (if available)
-          else if (quote.estimate?.gasCosts?.[0]?.amountUSD) {
-            // For now, fetch price from API for accurate calculation
-            const priceResponse = await fetch(`/api/prices?symbols=${fromToken.symbol}`);
-            if (priceResponse.ok) {
-              const prices = await priceResponse.json();
-              const tokenPrice = prices[fromToken.symbol] || 0;
-              if (tokenPrice > 0) {
-                usdValue = fromAmountNum * tokenPrice;
-                console.log(`[Analytics] 📈 Price API: ${fromToken.symbol} @ $${tokenPrice} = $${usdValue.toFixed(2)}`);
-              }
-            }
-          }
-          // Method 3: For native tokens, estimate based on symbol
-          else {
-            const nativeTokenPrices: Record<string, number> = {
-              'ETH': 3500, 'WETH': 3500,
-              'BNB': 600, 'WBNB': 600,
-              'MATIC': 1, 'WMATIC': 1,
-              'AVAX': 40, 'WAVAX': 40,
-              'FTM': 0.5, 'WFTM': 0.5,
-            };
-            const estimatedPrice = nativeTokenPrices[fromToken.symbol] || 0;
-            if (estimatedPrice > 0) {
-              usdValue = fromAmountNum * estimatedPrice;
-              console.log(`[Analytics] 🔷 Estimated native token: ${fromToken.symbol} @ ~$${estimatedPrice} = $${usdValue.toFixed(2)}`);
-            }
-          }
-          
-          console.log(`[Analytics] 💰 Final swap volume: $${usdValue.toFixed(2)}`);
-        } catch (calcError) {
-          console.error("[Analytics] Error calculating USD value:", calcError);
-          // Fallback: use a minimal value to avoid losing the swap record
-          usdValue = 0.01;
-        }
-
-        // Calculate gas fee revenue
-        let gasFeeRevenue = 0;
-        try {
-          const gasCosts = quote.estimate?.gasCosts?.[0];
-          if (gasCosts && gasCosts.amountUSD) {
-            const gasRevenue = calculateGasRevenue(gasCosts.amountUSD);
-            gasFeeRevenue = gasRevenue.revenue;
-            
-            console.log(`[Revenue] 💰 Gas Fee Revenue Calculation:`);
-            console.log(`[Revenue] Original Gas Fee: $${gasRevenue.originalGasFee.toFixed(2)}`);
-            console.log(`[Revenue] Additional Charge (50%): $${gasRevenue.additionalCharge.toFixed(2)}`);
-            console.log(`[Revenue] Total Gas Fee: $${gasRevenue.totalGasFee.toFixed(2)}`);
-            console.log(`[Revenue] Revenue to Wallet: $${gasRevenue.revenue.toFixed(2)}`);
-            console.log(`[Revenue] Revenue Wallet: ${gasRevenue.revenueWallet}`);
-          }
-        } catch (gasError) {
-          console.warn("[Revenue] ⚠️ Could not calculate gas revenue:", gasError);
-        }
-
-        const { error: insertErr } = await supabase.from("swap_analytics").insert({
-          user_address: quote.transactionRequest.from,
-          swap_volume_usd: usdValue,
-          gas_fee_revenue: gasFeeRevenue,
-          from_chain: quote.action.fromChainId,
-          to_chain: quote.action.toChainId,
-          tx_hash: txHash,
-        });
-
-        if (insertErr) console.error("[Analytics] ❌ Failed to log swap volume:", insertErr);
-        else console.log(`[Analytics] ✅ Swap volume logged: $${usdValue.toFixed(2)}, Gas revenue: $${gasFeeRevenue.toFixed(2)}`);
-
+        // Return immediately - don't wait for confirmation
+        // Analytics logging happens in background
         return txHash;
       } catch (err) {
         const errorMessage =

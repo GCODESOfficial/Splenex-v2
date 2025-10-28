@@ -3,7 +3,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -325,6 +325,9 @@ export function TokenSelectionModal({
   const [isLoadingCoinGecko, setIsLoadingCoinGecko] = useState(false)
   const [isLoadingAllTokens, setIsLoadingAllTokens] = useState(false)
   const [showChains, setShowChains] = useState(false);
+  const [customTokenAddress, setCustomTokenAddress] = useState("")
+  const [isLoadingCustomToken, setIsLoadingCustomToken] = useState(false)
+  const [customToken, setCustomToken] = useState<Token | null>(null)
 
   // Get balances from appropriate wallet
   const { tokenBalances: primaryTokenBalances } = useWallet()
@@ -335,6 +338,98 @@ export function TokenSelectionModal({
   const tokenBalances = walletContext === "secondary" ? secondaryTokenBalances : primaryTokenBalances
 
   console.log(`[TokenSelectionModal] 💼 Using ${walletContext} wallet balances:`, tokenBalances.length, "tokens")
+
+  // Function to fetch token metadata by contract address
+  const fetchTokenByAddress = async (address: string, chainId: number = 1) => {
+    if (!address || address.length !== 42 || !address.startsWith('0x')) {
+      return null
+    }
+
+    setIsLoadingCustomToken(true)
+    try {
+      // Try to get token metadata from multiple sources
+      const responses = await Promise.allSettled([
+        // Try Moralis API first
+        fetch(`/api/token-metadata?address=${address}&chainId=${chainId}`),
+        // Try CoinGecko API as fallback
+        fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`)
+      ])
+
+      // Process Moralis response
+      if (responses[0].status === 'fulfilled' && responses[0].value.ok) {
+        const moralisData = await responses[0].value.json()
+        if (moralisData.result) {
+          const token: Token = {
+            symbol: moralisData.result.symbol || 'UNKNOWN',
+            name: moralisData.result.name || 'Unknown Token',
+            address: address.toLowerCase(),
+            chainId: chainId,
+            chainName: getChainName(chainId),
+            decimals: moralisData.result.decimals || 18,
+            logoURI: moralisData.result.logo || undefined,
+            source: 'moralis'
+          }
+          setCustomToken(token)
+          setIsLoadingCustomToken(false)
+          return token
+        }
+      }
+
+      // Process CoinGecko response
+      if (responses[1].status === 'fulfilled' && responses[1].value.ok) {
+        const cgData = await responses[1].value.json()
+        if (cgData.id) {
+          const token: Token = {
+            symbol: cgData.symbol?.toUpperCase() || 'UNKNOWN',
+            name: cgData.name || 'Unknown Token',
+            address: address.toLowerCase(),
+            chainId: chainId,
+            chainName: getChainName(chainId),
+            decimals: 18, // Default to 18
+            logoURI: cgData.image?.large || undefined,
+            source: 'coingecko'
+          }
+          setCustomToken(token)
+          setIsLoadingCustomToken(false)
+          return token
+        }
+      }
+
+      // If no metadata found, create a basic token entry
+      const token: Token = {
+        symbol: 'UNKNOWN',
+        name: 'Unknown Token',
+        address: address.toLowerCase(),
+        chainId: chainId,
+        chainName: getChainName(chainId),
+        decimals: 18,
+        source: 'manual'
+      }
+      setCustomToken(token)
+      setIsLoadingCustomToken(false)
+      return token
+
+    } catch (error) {
+      console.error('[TokenSelectionModal] Error fetching token metadata:', error)
+      setIsLoadingCustomToken(false)
+      return null
+    }
+  }
+
+  // Helper function to get chain name by ID
+  const getChainName = (chainId: number): string => {
+    const chainMap: { [key: number]: string } = {
+      1: 'Ethereum',
+      56: 'BSC',
+      137: 'Polygon',
+      42161: 'Arbitrum',
+      10: 'Optimism',
+      8453: 'Base',
+      43114: 'Avalanche',
+      250: 'Fantom'
+    }
+    return chainMap[chainId] || `Chain ${chainId}`
+  }
 
   // Load all tokens from comprehensive API when modal opens
   useEffect(() => {
@@ -557,15 +652,85 @@ export function TokenSelectionModal({
     return 18;
   };
 
-  const allTokensCombined = [
-    // 1. User's actual token balances first (highest priority)
-    ...tokenBalances.map((balance) => {
-      // Extract chain name from balance.name (e.g., "Tether USD (BSC)" -> "BSC")
+  // Enhanced token deduplication and validation system with Rabby-style detection
+  const allTokensCombined = useMemo(() => {
+    const tokenMap = new Map<string, Token>();
+    const seenAddresses = new Set<string>();
+    
+    // Helper function to create unique key for deduplication
+    const createTokenKey = (token: Token) => `${token.symbol}-${token.chainId}-${token.address.toLowerCase()}`;
+    
+    // Helper function to validate token has proper contract address
+    const isValidToken = (token: Token) => {
+      // Skip tokens without proper contract addresses
+      if (!token.address) {
+        return false;
+      }
+      
+      // Skip placeholder addresses
+      if (token.address === "native" || token.address === "placeholder") {
+        return false;
+      }
+      
+      // Allow zero address for native tokens (ETH, BNB, etc.)
+      if (token.address === "0x0000000000000000000000000000000000000000") {
+        return true;
+      }
+      
+      // Ensure address is valid format for EVM chains
+      if (token.chainId !== 0 && token.chainId !== 99998 && token.chainId !== 99999) {
+        if (token.address.length !== 42 || !token.address.startsWith('0x')) {
+          return false;
+        }
+      }
+      
+      // For Solana tokens, allow base58 addresses
+      if (token.chainId === 101) {
+        if (token.address.length < 32 || token.address.length > 44) {
+          return false;
+        }
+      }
+      
+      // For Cosmos tokens, allow bech32 addresses
+      if (token.chainId === 99999) {
+        if (!token.address.includes('1') || token.address.length < 20) {
+          return false;
+        }
+      }
+      
+      return true;
+    };
+    
+    // Helper function to add token with deduplication
+    const addToken = (token: Token, priority: number = 0) => {
+      if (!isValidToken(token)) return;
+      
+      const key = createTokenKey(token);
+      const addressKey = `${token.address.toLowerCase()}-${token.chainId}`;
+      
+      // Skip if we've already seen this exact address-chain combination
+      if (seenAddresses.has(addressKey)) {
+        return;
+      }
+      
+      // Add to seen addresses
+      seenAddresses.add(addressKey);
+      
+      // Add token with priority (lower number = higher priority)
+      tokenMap.set(key, {
+        ...token,
+        priority,
+        source: token.source || "unknown"
+      });
+    };
+    
+    // 1. User's actual token balances first (highest priority - 1)
+    tokenBalances.forEach((balance) => {
       const chainName = balance.chain || (balance.name.includes("(") ? balance.name.split("(")[1].replace(")", "") : "Ethereum");
       const chainId = getChainIdFromName(chainName);
       const decimals = getTokenDecimals(balance.symbol, chainId);
       
-      return {
+      addToken({
         symbol: balance.symbol,
         name: balance.name,
         address: balance.address === "native" ? "0x0000000000000000000000000000000000000000" : balance.address,
@@ -574,42 +739,84 @@ export function TokenSelectionModal({
         balance: balance.balance,
         usdValue: `$${balance.usdValue.toFixed(2)}`,
         decimals: decimals,
-        source: "wallet", // Mark as wallet balance
-      };
-    }),
-    // 2. All tokens from comprehensive API (CoinGecko + all chains)
-    ...allTokens.map((token) => ({
-      ...token,
-      source: token.source || "comprehensive", // Mark as comprehensive token
-    })),
-    // 3. Popular tokens with REAL CoinGecko logos (instant loading!)
-    ...POPULAR_TOKENS_WITH_LOGOS.map((token) => ({
-      ...token,
-      source: "popular", // Mark as popular token
-    })),
-    // 4. CoinGecko tokens (comprehensive list with logos)
-    ...coinGeckoTokens.map((token) => ({
-      ...token,
-      source: "coingecko", // Mark as CoinGecko token
-    })),
-    // 5. LiFi supported tokens for selected chain
-    ...lifiTokens.map((token) => ({
-      ...token,
-      source: "lifi", // Mark as LiFi token
-    })),
-  ]
+        source: "wallet",
+      }, 1);
+    });
+    
+    // 2. Popular tokens with CORRECT addresses (priority 2)
+    POPULAR_TOKENS_WITH_LOGOS.forEach((token) => {
+      addToken({
+        ...token,
+        source: "popular",
+      }, 2);
+    });
+    
+    // 3. CoinGecko tokens (comprehensive list with verified addresses - priority 3)
+    coinGeckoTokens.forEach((token) => {
+      addToken({
+        ...token,
+        source: "coingecko",
+      }, 3);
+    });
+    
+    // 4. All tokens from comprehensive API (CoinGecko + all chains - priority 4)
+    allTokens.forEach((token) => {
+      addToken({
+        ...token,
+        source: token.source || "comprehensive",
+      }, 4);
+    });
+    
+    // 5. LiFi supported tokens for selected chain (priority 5)
+    lifiTokens.forEach((token) => {
+      addToken({
+        ...token,
+        source: "lifi",
+      }, 5);
+    });
+    
+    // Convert map to array and sort by priority, then by market cap rank
+    const tokens = Array.from(tokenMap.values()).sort((a, b) => {
+      // First sort by priority
+      if (a.priority !== b.priority) {
+        return a.priority - b.priority;
+      }
+      
+      // Then by market cap rank (lower number = higher rank)
+      const rankA = (a as any).marketCapRank || 999999;
+      const rankB = (b as any).marketCapRank || 999999;
+      return rankA - rankB;
+    });
+    
+    console.log(`[TokenSelectionModal] 🔄 Processed ${tokens.length} unique tokens (removed duplicates)`);
+    
+    // Log token distribution by source
+    const sourceDistribution = tokens.reduce((acc: any, token: any) => {
+      acc[token.source] = (acc[token.source] || 0) + 1;
+      return acc;
+    }, {});
+    console.log("[TokenSelectionModal] 📊 Token distribution by source:", sourceDistribution);
+    
+    return tokens;
+  }, [tokenBalances, coinGeckoTokens, allTokens, lifiTokens]);
 
-  const filteredTokens = allTokensCombined.filter((token, index, self) => {
-    // Remove duplicates based on symbol + chainId
-    const isDuplicate = self.findIndex((t) => t.symbol === token.symbol && t.chainId === token.chainId) !== index
-    if (isDuplicate) return false
+  const filteredTokens = allTokensCombined.filter((token) => {
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      return (
+        token.symbol.toLowerCase().includes(query) ||
+        token.name.toLowerCase().includes(query) ||
+        token.address.toLowerCase().includes(query)
+      )
+    }
 
-    const matchesSearch =
-      token.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      token.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      token.address.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesChain = selectedChain === null || token.chainId === selectedChain
-    return matchesSearch && matchesChain
+    // Filter by selected chain
+    if (selectedChain) {
+      return token.chainId === selectedChain
+    }
+
+    return true
   })
 
   const handleTokenSelect = (token: Token) => {
@@ -759,7 +966,7 @@ export function TokenSelectionModal({
               </DialogTitle>
             </DialogHeader>
 
-            <div className="mb-4">
+            <div className="mb-4 space-y-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
@@ -769,6 +976,52 @@ export function TokenSelectionModal({
                   className="pl-10 bg-gray-900 border-gray-700 text-white"
                 />
               </div>
+              
+              {/* Contract Address Search */}
+              <div className="relative">
+                <Input
+                  placeholder="Enter contract address (0x...)"
+                  value={customTokenAddress}
+                  onChange={(e) => setCustomTokenAddress(e.target.value)}
+                  className="bg-gray-900 border-gray-700 text-white"
+                />
+                <Button
+                  onClick={() => fetchTokenByAddress(customTokenAddress)}
+                  disabled={!customTokenAddress || isLoadingCustomToken || customTokenAddress.length !== 42}
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs"
+                >
+                  {isLoadingCustomToken ? "Loading..." : "Add Token"}
+                </Button>
+              </div>
+              
+              {/* Custom Token Display */}
+              {customToken && (
+                <div className="bg-gray-800 border border-gray-700 rounded-lg p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <TokenIconWithFallback
+                        symbol={customToken.symbol}
+                        logoURI={customToken.logoURI}
+                        size={24}
+                      />
+                      <div>
+                        <div className="text-white font-medium">{customToken.symbol}</div>
+                        <div className="text-gray-400 text-sm">{customToken.name}</div>
+                        <div className="text-gray-500 text-xs">{customToken.address}</div>
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => {
+                        onSelectToken(customToken)
+                        onClose()
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2"
+                    >
+                      Select
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Helpful hint when no search/filter */}
@@ -882,6 +1135,16 @@ export function TokenSelectionModal({
         <div className="text-white font-medium">{token.symbol}</div>
         <div className="text-gray-400 text-sm">
           {token.chainName} • {token.address.slice(0, 6)}...{token.address.slice(-4)}
+        </div>
+        <div className="text-xs text-gray-500 mt-1">
+          {(token as any).source === 'wallet' && '💰 Your Balance'}
+          {(token as any).source === 'coingecko' && '🔍 CoinGecko Verified'}
+          {(token as any).source === 'comprehensive' && '🌍 Multi-Chain'}
+          {(token as any).source === 'popular' && '⭐ Popular Token'}
+          {(token as any).source === 'lifi' && '🌉 LiFi Supported'}
+          {(token as any).source === 'verified' && '✅ Verified Address'}
+          {(token as any).source === 'unverified' && '⚠️ Unverified'}
+          {(token as any).isPlaceholder && '⚠️ Address Required'}
         </div>
       </div>
     </div>

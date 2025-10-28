@@ -1,8 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabaseClient";
 
-export function useSwapCount() {
+export function useSwapCount(last24Hours = false) {
   const [swapCount, setSwapCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -13,18 +12,18 @@ export function useSwapCount() {
         setIsLoading(true);
         setError(null);
 
-        // Get the total count of swaps
-        const { count, error } = await supabase
-          .from('swap_analytics')
-          .select('*', { count: 'exact', head: true });
-
-        if (error) {
-          console.error('[Swap Count] Error fetching count:', error);
-          setError(error.message);
+        // Get the total count from API
+        const url = last24Hours ? '/api/swap-count?last24Hours=true' : '/api/swap-count';
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          console.error('[Swap Count] Error fetching count:', response.status);
+          setError('Failed to fetch swap count');
           return;
         }
 
-        setSwapCount(count || 0);
+        const data = await response.json();
+        setSwapCount(data.count || 0);
       } catch (err) {
         console.error('[Swap Count] Unexpected error:', err);
         setError('Failed to fetch swap count');
@@ -34,54 +33,15 @@ export function useSwapCount() {
     }
 
     fetchSwapCount();
-
-    // Set up real-time subscription for new swaps
-    const channel = supabase
-      .channel('swap_count_realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'swap_analytics',
-        },
-        (payload) => {
-          console.log('[Swap Count] New swap detected:', payload);
-          setSwapCount(prev => prev + 1);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'swap_analytics',
-        },
-        (payload) => {
-          console.log('[Swap Count] Swap deleted:', payload);
-          setSwapCount(prev => Math.max(0, prev - 1));
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchSwapCount, 30000);
+    return () => clearInterval(interval);
+  }, [last24Hours]);
 
   return { 
     swapCount, 
     isLoading, 
-    error,
-    refreshCount: () => {
-      // Manual refresh function
-      const { count } = supabase
-        .from('swap_analytics')
-        .select('*', { count: 'exact', head: true });
-      
-      if (count) {
-        setSwapCount(count);
-      }
-    }
+    error
   };
 }

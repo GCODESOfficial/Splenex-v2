@@ -1,7 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 
 export interface DashboardMetrics {
   totalVolume: number;
@@ -26,23 +25,28 @@ export function useAnalytics() {
       try {
         setIsLoading(true);
 
-        // Fetch all swap analytics
-        const { data, error } = await supabase
-          .from("swap_analytics")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (error) {
+        // Fetch data from API route
+        console.log("[Analytics] 🔍 Fetching analytics from API...");
+        
+        const response = await fetch("/api/analytics");
+        
+        if (!response.ok) {
+          console.error("[Analytics] ❌ API error:", response.status);
           setIsLoading(false);
           return;
         }
 
-        if (!data || data.length === 0) {
+        const data = await response.json();
+
+        if (!data || !Array.isArray(data) || data.length === 0) {
+          console.log("[Analytics] ⚠️ No swap data found");
           setIsLoading(false);
           return;
         }
 
-        // Calculate metrics
+        console.log(`[Analytics] ✅ Found ${data.length} swaps`);
+
+        // Calculate metrics from API data
         const totalVolume = data.reduce((sum: number, row: any) => {
           return sum + Number(row.swap_volume_usd || 0);
         }, 0);
@@ -51,16 +55,28 @@ export function useAnalytics() {
 
         // Count unique users (wallet addresses)
         const uniqueUsers = new Set(
-          data.map((row: any) => row.user_address?.toLowerCase())
+          data.map((row: any) => row.wallet_address?.toLowerCase())
         ).size;
 
-        // Calculate actual gas fee revenue from swaps
+        // Calculate actual revenue: gas fees + LI.FI fees
         const gasFeeRevenue = data.reduce((sum: number, row: any) => {
-          return sum + Number(row.gas_fee_revenue || 0);
+          return sum + Number(row.gas_fee_revenue || row.additional_charge || 0);
         }, 0);
 
-        // Network revenue = gas fee revenue (50% of gas fees)
-        const networkRevenue = gasFeeRevenue;
+        const lifiFeeRevenue = data.reduce((sum: number, row: any) => {
+          return sum + Number(row.lifi_fee_usd || 0);
+        }, 0);
+
+        // Network revenue = gas fee revenue + LI.FI fees
+        const networkRevenue = gasFeeRevenue + lifiFeeRevenue;
+        
+        console.log(`[Analytics] 📊 Calculated metrics:`);
+        console.log(`[Analytics]   - Total Volume: $${totalVolume.toFixed(2)}`);
+        console.log(`[Analytics]   - Transaction Count: ${transactionCount}`);
+        console.log(`[Analytics]   - Unique Users: ${uniqueUsers}`);
+        console.log(`[Analytics]   - Gas Fee Revenue: $${gasFeeRevenue.toFixed(2)}`);
+        console.log(`[Analytics]   - LI.FI Fee Revenue: $${lifiFeeRevenue.toFixed(2)}`);
+        console.log(`[Analytics]   - Network Revenue: $${networkRevenue.toFixed(2)}`);
 
         // Group by day for chart
         const grouped: Record<string, { volume: number; transactions: number }> = {};
@@ -97,26 +113,10 @@ export function useAnalytics() {
     }
 
     fetchAnalytics();
-
-    // Real-time subscription for new swaps
-    const channel = supabase
-      .channel("analytics_realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "swap_analytics",
-        },
-        () => {
-          fetchAnalytics(); // Refetch when new swap added
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchAnalytics, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   return { ...metrics, isLoading };

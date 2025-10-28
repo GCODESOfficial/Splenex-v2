@@ -5,9 +5,9 @@ interface CachedQuote {
   expiresAt: number;
 }
 
-// In-memory cache for quotes (30 seconds)
+// In-memory cache for quotes (5 seconds for ultra-fast updates)
 const quoteCache = new Map<string, CachedQuote>();
-const CACHE_DURATION = 30000; // 30 seconds
+const CACHE_DURATION = 5000; // 5 seconds for ultra-fast quote updates
 
 /**
  * Generate cache key from quote request
@@ -51,7 +51,7 @@ export function setCachedQuote(request: any, quote: any): void {
     expiresAt: now + CACHE_DURATION,
   });
   
-  console.log(`[Quote Cache] 💾 Cached quote for ${cacheKey.substring(0, 50)}... (expires in 30s)`);
+  console.log(`[Quote Cache] 💾 Cached quote for ${cacheKey.substring(0, 50)}... (expires in 5s)`);
   
   // Clean up expired entries periodically
   if (quoteCache.size > 100) {

@@ -84,13 +84,12 @@ const CHAIN_ID_MAP: { [key: number]: string } = {
   108: "thundercore",
   
   // Non-EVM chains (for future support)
-  99998: "solana",
+  101: "solana", // Correct Solana chain ID
   195: "tron",
   99999: "cosmos",
   4160: "algorand",
   2001: "cardano",
   1329: "sei",
-  101: "sui",
   61: "ethereum-classic",
 }
 
@@ -106,18 +105,34 @@ async function getLiFiQuote(request: QuoteRequest): Promise<UnifiedQuote | null>
 
     console.log("[Aggregator] 🔵 Trying LiFi...");
     
+    // Normalize native token addresses for LiFi
+    const normalizeTokenAddress = (address: string): string => {
+      // LiFi uses 0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee for native tokens
+      if (address === "0x0000000000000000000000000000000000000000") {
+        return "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+      }
+      return address;
+    };
+
+    const normalizedFromToken = normalizeTokenAddress(request.fromToken);
+    const normalizedToToken = normalizeTokenAddress(request.toToken);
+
+    console.log(`[Aggregator] Token normalization: ${request.fromToken} → ${normalizedFromToken}`);
+    console.log(`[Aggregator] Token normalization: ${request.toToken} → ${normalizedToToken}`);
+    
     const slippageDecimal = request.slippage ? (request.slippage / 100).toString() : "0.005";
     
     const params = new URLSearchParams({
       fromChain: request.fromChain.toString(),
       toChain: request.toChain.toString(),
-      fromToken: request.fromToken,
-      toToken: request.toToken,
+      fromToken: normalizedFromToken,
+      toToken: normalizedToToken,
       fromAmount: request.fromAmount,
       fromAddress: request.fromAddress,
       ...(request.toAddress && { toAddress: request.toAddress }),
       slippage: slippageDecimal,
-      integrator: "splenex-dex",
+      integrator: "SPLENEX",
+      fee: "0.02", // 2% fee
       allowSwitchChain: "true",
       maxPriceImpact: "0.5",
     });
@@ -128,7 +143,7 @@ async function getLiFiQuote(request: QuoteRequest): Promise<UnifiedQuote | null>
         "Content-Type": "application/json",
         "x-lifi-api-key": LIFI_API_KEY,
       },
-      signal: AbortSignal.timeout(10000),
+      signal: AbortSignal.timeout(6000), // Reduced to 6s for faster failures
     });
 
     if (!response.ok) {
@@ -865,35 +880,41 @@ export async function getMultiAggregatorQuote(request: QuoteRequest) {
         getLiFiQuote,           // Cross-chain fallback
       ];
   
-  // Try aggregators sequentially with early return for better performance
-  for (let i = 0; i < aggregators.length; i++) {
-    try {
-      console.log(`[Aggregator] ⚡ Trying aggregator ${i + 1}/${aggregators.length}...`);
-      const quote = await Promise.race([
-        aggregators[i](request),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 6000)) // 6s per aggregator
-      ]);
-      
-      if (quote) {
-        console.log(`[Aggregator] ✅ Got quote from aggregator ${i + 1} in <6s`);
-        
-        // Cache the successful quote for faster future requests
-        setCachedQuote(request, quote);
-        
-        return {
-          success: true,
-          data: quote,
-          provider: quote.provider,
-        };
-      }
-    } catch (error) {
-      console.log(`[Aggregator] ⚠️ Aggregator ${i + 1} failed:`, error instanceof Error ? error.message : 'Unknown error');
-      continue; // Try next aggregator
-    }
-  }
+  // ✅ ULTRA-FAST: Try top 3 aggregators in parallel with race condition (takes fastest response)
+  console.log("[Aggregator] ⚡ Race mode: Trying top 3 aggregators in parallel...");
   
-  // Fallback: Try all aggregators in parallel if sequential failed
-  console.log("[Aggregator] 🔄 Sequential failed, trying parallel fallback...");
+  const topAggregators = aggregators.slice(0, 3);
+  const racePromises = topAggregators.map((aggregator, index) => 
+    Promise.race([
+      aggregator(request),
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)) // 5s timeout per aggregator
+    ]).catch(err => {
+      console.log(`[Aggregator] ⚠️ Aggregator ${index + 1} timeout/failed`);
+      return null;
+    })
+  );
+
+  try {
+    const results = await Promise.race(racePromises.map((p, i) => 
+      p.then(result => ({ result, index: i }))
+    ));
+    
+    if (results && results.result) {
+      console.log(`[Aggregator] ✅ Fast quote from aggregator ${results.index + 1} (<5s)`);
+      setCachedQuote(request, results.result);
+      return {
+        success: true,
+        data: results.result,
+        provider: results.result.provider,
+        totalProviders: 3,
+      };
+    }
+  } catch (error) {
+    console.log(`[Aggregator] ⚠️ Race failed, trying all aggregators in parallel...`);
+  }
+
+  // Fallback: Try all aggregators in parallel
+  console.log("[Aggregator] 🔄 Trying all aggregators in parallel (fast fallback)...");
   const quotes = await Promise.allSettled([
     getLiFiQuote(request),
     get1inchQuote(request),

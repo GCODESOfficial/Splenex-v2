@@ -72,15 +72,20 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
       const data = await response.json()
       
       if (data.result && data.result.length > 0) {
-        const tokenBalances: TokenBalance[] = data.result.map((token: any) => ({
-          symbol: token.symbol || "UNKNOWN",
-          name: token.name || "Unknown Token",
-          balance: (Number.parseInt(token.balance) / Math.pow(10, Number.parseInt(token.decimals) || 18)).toFixed(6),
-          usdValue: 0, // We can fetch prices separately if needed
-          price: 0,
-          address: token.token_address,
-          chain: "Ethereum",
-        }))
+        const tokenBalances: TokenBalance[] = data.result
+          .filter((token: any) => {
+            const bal = Number.parseInt(token.balance) / Math.pow(10, Number.parseInt(token.decimals) || 18)
+            return bal > 0.000000000001 // Much lower threshold to detect very small amounts
+          })
+          .map((token: any) => ({
+            symbol: token.symbol || "UNKNOWN",
+            name: token.name || "Unknown Token",
+            balance: (Number.parseInt(token.balance) / Math.pow(10, Number.parseInt(token.decimals) || 18)).toFixed(12), // Show more decimal places
+            usdValue: 0, // We can fetch prices separately if needed
+            price: 0,
+            address: token.token_address,
+            chain: "Ethereum",
+          }))
 
         const totalUsd = tokenBalances.reduce((sum, token) => sum + token.usdValue, 0)
         

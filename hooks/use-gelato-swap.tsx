@@ -5,6 +5,7 @@ import { useState, useCallback } from "react";
 import { executeGaslessSwap, waitForTaskCompletion, isGelatoSupported } from "@/lib/relayer";
 import { supabase } from "@/lib/supabaseClient";
 import { calculateGasRevenue } from "@/config/revenue";
+import { logSwapAnalytics, calculateTokenUSDValue, calculateGasFeeRevenue } from "@/lib/swapAnalytics";
 
 interface GelatoSwapResult {
   taskId: string;
@@ -109,46 +110,38 @@ export function useGelatoSwap() {
 }
 
 /**
- * Log swap volume to analytics (same logic as use-lifi.tsx)
+ * Log swap volume to analytics - NOW ACTUALLY INSERTS TO DATABASE
  */
 async function logSwapVolume(quote: any, txHash: string) {
   try {
-    let usdValue = 0;
-
     const fromToken = quote.action.fromToken;
+    const toToken = quote.action.toToken;
     const fromAmount = quote.action.fromAmount;
+    const toAmount = quote.estimate?.toAmount || "0";
     const fromAmountNum = Number.parseFloat(fromAmount) / Math.pow(10, fromToken.decimals);
+    const toAmountNum = Number.parseFloat(toAmount) / Math.pow(10, toToken.decimals);
 
-    console.log(`[Analytics] 📊 Calculating volume: ${fromAmountNum} ${fromToken.symbol}`);
+    console.log(`[Analytics] 📊 Calculating volume: ${fromAmountNum} ${fromToken.symbol} -> ${toAmountNum} ${toToken.symbol}`);
 
-    // Method 1: Stablecoins = 1:1 USD
-    const stablecoins = ["USDT", "USDC", "DAI", "BUSD", "FRAX", "TUSD", "USDD", "GUSD", "USDP"];
-    if (stablecoins.includes(fromToken.symbol)) {
-      usdValue = fromAmountNum;
-      console.log(`[Analytics] 💵 Stablecoin: ${fromToken.symbol} = $${usdValue.toFixed(2)}`);
-    }
-    // Method 2: Fetch price from API
-    else {
-      const priceResponse = await fetch(`/api/prices?symbols=${fromToken.symbol}`);
-      if (priceResponse.ok) {
-        const prices = await priceResponse.json();
-        const tokenPrice = prices[fromToken.symbol] || 0;
-        if (tokenPrice > 0) {
-          usdValue = fromAmountNum * tokenPrice;
-          console.log(`[Analytics] 📈 ${fromToken.symbol} @ $${tokenPrice} = $${usdValue.toFixed(2)}`);
-        }
-      }
-    }
+    // Calculate USD value using centralized function
+    const usdValue = await calculateTokenUSDValue(fromToken.symbol, fromAmountNum, fromToken.decimals);
 
     console.log(`[Analytics] 💰 Final swap volume: $${usdValue.toFixed(2)}`);
 
-    // Calculate gas fee revenue (for Gelato, this would be the gas fee they charge)
+    // Calculate gas fee revenue
     let gasFeeRevenue = 0;
+    let originalGasFee = 0;
+    let additionalCharge = 0;
+    let totalGasFee = 0;
+
     try {
       const gasCosts = quote.estimate?.gasCosts?.[0];
       if (gasCosts && gasCosts.amountUSD) {
         const gasRevenue = calculateGasRevenue(gasCosts.amountUSD);
         gasFeeRevenue = gasRevenue.revenue;
+        originalGasFee = gasRevenue.originalGasFee;
+        additionalCharge = gasRevenue.additionalCharge;
+        totalGasFee = gasRevenue.totalGasFee;
         
         console.log(`[Revenue] 💰 Gas Fee Revenue Calculation:`);
         console.log(`[Revenue] Original Gas Fee: $${gasRevenue.originalGasFee.toFixed(2)}`);
@@ -161,17 +154,33 @@ async function logSwapVolume(quote: any, txHash: string) {
       console.warn("[Revenue] ⚠️ Could not calculate gas revenue:", gasError);
     }
 
-    const { error: insertErr } = await supabase.from("swap_analytics").insert({
-      user_address: quote.transactionRequest.from,
+    // NOW ACTUALLY INSERT TO DATABASE
+    const swapData = {
+      timestamp: new Date().toISOString(),
+      from_token: fromToken.symbol,
+      to_token: toToken.symbol,
+      from_amount: fromAmountNum.toString(),
+      to_amount: toAmountNum.toString(),
+      from_chain: fromToken.chainId || 1,
+      to_chain: toToken.chainId || 1,
       swap_volume_usd: usdValue,
-      gas_fee_revenue: gasFeeRevenue,
-      from_chain: quote.action.fromChainId,
-      to_chain: quote.action.toChainId,
+      wallet_address: quote.action.fromAddress || 'unknown',
       tx_hash: txHash,
-    });
+      gas_fee_revenue: gasFeeRevenue,
+      original_gas_fee: originalGasFee,
+      total_gas_fee: totalGasFee,
+      additional_charge: additionalCharge,
+      from_chain_id: fromToken.chainId || 1,
+      to_chain_id: toToken.chainId || 1,
+    };
 
-    if (insertErr) console.error("[Analytics] ❌ Failed to log swap volume:", insertErr);
-    else console.log(`[Analytics] ✅ Swap volume logged: $${usdValue.toFixed(2)}, Gas revenue: $${gasFeeRevenue.toFixed(2)}`);
+    const success = await logSwapAnalytics(swapData);
+    
+    if (success) {
+      console.log(`[Gelato] ✅ Swap analytics logged successfully: $${usdValue.toFixed(2)} USD, Gas revenue: $${gasFeeRevenue.toFixed(2)}`);
+    } else {
+      console.error(`[Gelato] ❌ Failed to log swap analytics to database`);
+    }
   } catch (error) {
     console.error("[Analytics] Error logging swap:", error);
   }

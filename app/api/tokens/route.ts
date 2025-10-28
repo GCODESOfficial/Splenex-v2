@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { moralisService } from "@/lib/moralis-service"
 
 export async function GET(request: NextRequest) {
   try {
@@ -6,7 +7,7 @@ export async function GET(request: NextRequest) {
     const address = searchParams.get("address")
     const chain = searchParams.get("chain")
 
-    console.log(`[v0] API request for ${chain} chain, address: ${address}`)
+    console.log(`[Tokens API] Request for ${chain} chain, address: ${address}`)
 
     if (!address || !chain) {
       return NextResponse.json({ error: "Missing address or chain parameter" }, { status: 400 })
@@ -15,34 +16,48 @@ export async function GET(request: NextRequest) {
     const moralisApiKey = process.env.MORALIS_API_KEY
 
     if (!moralisApiKey) {
-      console.log("[v0] Moralis API key not configured, returning empty result")
+      console.log("[Tokens API] ❌ Moralis API key not configured, returning empty result")
+      console.log("[Tokens API] Please set MORALIS_API_KEY environment variable")
       return NextResponse.json({ result: [] }, { status: 200 })
     }
+    
+    console.log(`[Tokens API] ✅ Moralis API key configured, making request to chain: ${chain}`)
 
     try {
-      const response = await fetch(
-        `https://deep-index.moralis.io/api/v2.2/${address}/erc20?chain=${chain}&exclude_spam=true`,
-        {
-          headers: {
-            "X-API-Key": moralisApiKey,
-          },
-        },
-      )
-
-      if (!response.ok) {
-        console.log(`[v0] Moralis API failed with status: ${response.status}`)
-        return NextResponse.json({ result: [] }, { status: 200 })
+      const tokens = await moralisService.getTokenBalances(address, chain)
+      
+      console.log(`[Tokens API] Moralis found ${tokens.length} tokens`)
+      
+      // Transform the response to match the expected format
+      const transformedData = {
+        result: tokens.map(token => ({
+          contract_address: token.address,
+          contract_name: token.name,
+          contract_ticker_symbol: token.symbol,
+          contract_decimals: token.decimals,
+          balance: token.balance,
+          quote: token.usdValue,
+          quote_rate: token.price,
+          logo_url: token.logoUrl,
+          native_token: token.isNative || false,
+          // Additional fields for compatibility
+          token_address: token.address,
+          symbol: token.symbol,
+          name: token.name,
+          decimals: token.decimals,
+          usdValue: token.usdValue,
+          price: token.price
+        }))
       }
 
-      const data = await response.json()
-      console.log(`[v0] Moralis API success for ${chain}:`, data)
-      return NextResponse.json(data)
+      console.log(`[Tokens API] Moralis API success for ${chain}:`, transformedData)
+      return NextResponse.json(transformedData)
     } catch (moralisError) {
-      console.log("[v0] Moralis API error:", moralisError)
+      console.log("[Tokens API] Moralis API error:", moralisError)
       return NextResponse.json({ result: [] }, { status: 200 })
     }
   } catch (error) {
-    console.error("[v0] API route error:", error)
+    console.error("[Tokens API] API route error:", error)
     return NextResponse.json({ result: [] }, { status: 200 })
   }
 }

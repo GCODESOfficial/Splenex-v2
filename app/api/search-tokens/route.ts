@@ -43,12 +43,13 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const tokensWithPlatforms: any[] = [];
     
-    for (let i = 0; i < Math.min(coins.length, 20); i++) {
+    // Process more tokens for better coverage
+    for (let i = 0; i < Math.min(coins.length, 30); i++) {
       const coin = coins[i];
       try {
-        // Add small delay between requests to avoid rate limits (100ms)
+        // Add small delay between requests to avoid rate limits (50ms - faster)
         if (i > 0) {
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 50));
         }
         
         const detailResponse = await fetch(
@@ -68,6 +69,10 @@ export async function GET(request: NextRequest) {
             logoURI: detail.image?.small || detail.image?.thumb || coin.large || coin.thumb,
             platforms: detail.platforms || {},
             marketCapRank: coin.market_cap_rank,
+            // Add additional metadata
+            description: detail.description?.en?.substring(0, 100) || '',
+            categories: detail.categories || [],
+            homepage: detail.links?.homepage?.[0] || '',
           });
         } else {
           // If detail fetch fails, still include basic info
@@ -101,6 +106,7 @@ export async function GET(request: NextRequest) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formattedTokens: any[] = [];
     const PLATFORM_TO_CHAIN: { [key: string]: { chainId: number; chainName: string } } = {
+      // Major EVM Chains
       "ethereum": { chainId: 1, chainName: "Ethereum" },
       "binance-smart-chain": { chainId: 56, chainName: "BSC" },
       "polygon-pos": { chainId: 137, chainName: "Polygon" },
@@ -109,22 +115,68 @@ export async function GET(request: NextRequest) {
       "avalanche": { chainId: 43114, chainName: "Avalanche" },
       "base": { chainId: 8453, chainName: "Base" },
       "fantom": { chainId: 250, chainName: "Fantom" },
-      "solana": { chainId: 1151111081099710, chainName: "Solana" },
-      "near-protocol": { chainId: 397, chainName: "NEAR" },
-      "cronos": { chainId: 25, chainName: "Cronos" },
-      "gnosis": { chainId: 100, chainName: "Gnosis" },
-      "celo": { chainId: 42220, chainName: "Celo" },
       "harmony-shard-0": { chainId: 1666600000, chainName: "Harmony" },
-      "moonbeam": { chainId: 1284, chainName: "Moonbeam" },
       "moonriver": { chainId: 1285, chainName: "Moonriver" },
-      "kava": { chainId: 2222, chainName: "Kava" },
+      "moonbeam": { chainId: 1284, chainName: "Moonbeam" },
+      "cronos": { chainId: 25, chainName: "Cronos" },
+      "celo": { chainId: 42220, chainName: "Celo" },
       "aurora": { chainId: 1313161554, chainName: "Aurora" },
-      "boba": { chainId: 288, chainName: "Boba" },
       "metis-andromeda": { chainId: 1088, chainName: "Metis" },
-      "fuse": { chainId: 122, chainName: "Fuse" },
-      "evmos": { chainId: 9001, chainName: "Evmos" },
-      "okex-chain": { chainId: 66, chainName: "OKX" },
+      "kucoin-community-chain": { chainId: 321, chainName: "KCC" },
+      "okex-chain": { chainId: 66, chainName: "OKExChain" },
+      "boba-network": { chainId: 288, chainName: "Boba" },
+      "gnosis": { chainId: 100, chainName: "Gnosis" },
+      "polygon-zkevm": { chainId: 1101, chainName: "Polygon zkEVM" },
+      "zksync-era": { chainId: 324, chainName: "zkSync Era" },
+      "linea": { chainId: 59144, chainName: "Linea" },
+      "scroll": { chainId: 534352, chainName: "Scroll" },
+      "mantle": { chainId: 5000, chainName: "Mantle" },
+      "blast": { chainId: 81457, chainName: "Blast" },
+      
+      // Additional EVM Chains
       "heco": { chainId: 128, chainName: "HECO" },
+      "fuse": { chainId: 122, chainName: "Fuse" },
+      "bittorrent": { chainId: 199, chainName: "BitTorrent" },
+      "velas": { chainId: 106, chainName: "Velas" },
+      "syscoin": { chainId: 57, chainName: "Syscoin" },
+      "theta": { chainId: 361, chainName: "Theta" },
+      "telos": { chainId: 40, chainName: "Telos" },
+      "tomochain": { chainId: 88, chainName: "TomoChain" },
+      "wanchain": { chainId: 888, chainName: "Wanchain" },
+      "elastos": { chainId: 20, chainName: "Elastos" },
+      "iotex": { chainId: 4689, chainName: "IoTeX" },
+      "evmos": { chainId: 9001, chainName: "Evmos" },
+      "kava": { chainId: 2222, chainName: "Kava" },
+      "klaytn": { chainId: 8217, chainName: "Klaytn" },
+      "meter": { chainId: 82, chainName: "Meter" },
+      "thundercore": { chainId: 108, chainName: "ThunderCore" },
+      "arbitrum-nova": { chainId: 42170, chainName: "Arbitrum Nova" },
+      
+      // Non-EVM Chains
+      "solana": { chainId: 101, chainName: "Solana" }, // Use standard Solana chain ID
+      "near-protocol": { chainId: 99999, chainName: "NEAR" },
+      "cosmos": { chainId: 99999, chainName: "Cosmos" },
+      "osmosis": { chainId: 99999, chainName: "Osmosis" },
+      "juno": { chainId: 99999, chainName: "Juno" },
+      "akash": { chainId: 99999, chainName: "Akash" },
+      "secret": { chainId: 99999, chainName: "Secret" },
+      "persistence": { chainId: 99999, chainName: "Persistence" },
+      "stargaze": { chainId: 99999, chainName: "Stargaze" },
+      "axelar": { chainId: 99999, chainName: "Axelar" },
+      "band-protocol": { chainId: 99999, chainName: "Band Protocol" },
+      "thorchain": { chainId: 99999, chainName: "THORChain" },
+      
+      // Bitcoin and Major Cryptocurrencies
+      "bitcoin": { chainId: 0, chainName: "Bitcoin" },
+      "litecoin": { chainId: 0, chainName: "Litecoin" },
+      "dogecoin": { chainId: 0, chainName: "Dogecoin" },
+      "bitcoin-cash": { chainId: 0, chainName: "Bitcoin Cash" },
+      "ripple": { chainId: 0, chainName: "Ripple" },
+      "stellar": { chainId: 0, chainName: "Stellar" },
+      "monero": { chainId: 0, chainName: "Monero" },
+      "zcash": { chainId: 0, chainName: "Zcash" },
+      "dash": { chainId: 0, chainName: "Dash" },
+      "ethereum-classic": { chainId: 61, chainName: "Ethereum Classic" },
     };
 
     for (const token of validTokens) {
@@ -152,19 +204,39 @@ export async function GET(request: NextRequest) {
           }
         }
       } else {
-        // NO PLATFORM DATA - Show on BSC by default (most meme coins are on BSC)
-        console.log(`[Search API] ⚠️ ${token.symbol} has no platform data, defaulting to BSC`);
+        // NO PLATFORM DATA - Try to determine the most likely chain based on token characteristics
+        let defaultChain = { chainId: 56, chainName: "BSC" }; // Default to BSC
+        
+        // Smart chain selection based on token characteristics
+        if (token.marketCapRank && token.marketCapRank <= 100) {
+          // Top 100 tokens are likely on Ethereum
+          defaultChain = { chainId: 1, chainName: "Ethereum" };
+        } else if (token.symbol.includes('DOGE') || token.symbol.includes('SHIB') || token.symbol.includes('PEPE')) {
+          // Meme tokens are often on BSC or Ethereum
+          defaultChain = { chainId: 56, chainName: "BSC" };
+        } else if (token.categories && token.categories.includes('solana-ecosystem')) {
+          // Solana ecosystem tokens
+          defaultChain = { chainId: 99998, chainName: "Solana" };
+        } else if (token.categories && token.categories.includes('cosmos-ecosystem')) {
+          // Cosmos ecosystem tokens
+          defaultChain = { chainId: 99999, chainName: "Cosmos" };
+        }
+        
+        console.log(`[Search API] ⚠️ ${token.symbol} has no platform data, defaulting to ${defaultChain.chainName}`);
         formattedTokens.push({
           id: token.id,
           symbol: token.symbol,
           name: token.name,
           address: "0x0000000000000000000000000000000000000000", // Placeholder - user needs to find actual address
-          chainId: 56,
-          chainName: "BSC",
+          chainId: defaultChain.chainId,
+          chainName: defaultChain.chainName,
           logoURI: token.logoURI,
           decimals: 18,
           marketCapRank: token.marketCapRank,
           isPlaceholder: true, // Mark as placeholder so UI can show a note
+          description: token.description,
+          categories: token.categories,
+          homepage: token.homepage,
         });
       }
     }

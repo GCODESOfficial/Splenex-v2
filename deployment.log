@@ -1,0 +1,9 @@
+🚀 Deploying SplenexDEXAggregator to BSC Mainnet...
+Deploying contracts with the account: 0x29d75C4D23FE5041E2AA86D06dA3e53DDD3c5978
+❌ Deployment failed: ConnectTimeoutError: Connect Timeout Error
+    at onConnectTimeout (/Users/a1234/Desktop/CODE BOSS/SPLENEX/Splenex/node_modules/hardhat/node_modules/undici/lib/core/connect.js:186:24)
+    at /Users/a1234/Desktop/CODE BOSS/SPLENEX/Splenex/node_modules/hardhat/node_modules/undici/lib/core/connect.js:133:46
+    at Immediate._onImmediate (/Users/a1234/Desktop/CODE BOSS/SPLENEX/Splenex/node_modules/hardhat/node_modules/undici/lib/core/connect.js:174:9)
+    at processImmediate (node:internal/timers:485:21) {
+  code: 'UND_ERR_CONNECT_TIMEOUT'
+}

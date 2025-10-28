@@ -149,7 +149,7 @@ const TOKEN_LIQUIDITY: { [key: string]: { [chainId: number]: string } } = {
     1: "5000000", // $5M
   },
   "BONK": {
-    99998: "10000000", // $10M
+    101: "10000000", // $10M
   },
 };
 

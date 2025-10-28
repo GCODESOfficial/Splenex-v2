@@ -15,12 +15,12 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   { name: "Overview", href: "/", icon: "/images/icons/overview.svg" },
   { name: "Swap", href: "/swap", icon: "/images/icons/swap.svg" },
-  { name: "LP Market", href: "/lp-market", icon: "/images/icons/lpmarket.svg" },
   {
     name: "Leaderboard",
     href: "/leaderboard",
     icon: "/images/icons/leaderboard.svg",
   },
+  { name: "LP Market", href: "/lp-market", icon: "/images/icons/lpmarket.svg" },
   { name: "sPort", href: "/sport", icon: "/images/icons/sport.svg" },
   { name: "sFund DAO", href: "/sfund-dao", icon: "/images/icons/sfund.svg" },
   { name: "sHold", href: "/shold", icon: "/images/icons/hold.svg" },

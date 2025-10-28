@@ -54,7 +54,7 @@ const PLATFORM_TO_CHAIN_ID: { [key: string]: { chainId: number; chainName: strin
   "polygon-zkevm": { chainId: 1101, chainName: "Polygon zkEVM" },
   "zksync": { chainId: 324, chainName: "zkSync Era" },
   "linea": { chainId: 59144, chainName: "Linea" },
-  "solana": { chainId: 99998, chainName: "Solana" },
+  "solana": { chainId: 101, chainName: "Solana" },
   "cosmos": { chainId: 99999, chainName: "Cosmos" },
   // Additional EVM chains
   "xdai": { chainId: 100, chainName: "Gnosis" },

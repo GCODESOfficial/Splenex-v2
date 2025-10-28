@@ -27,12 +27,54 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
     console.log("[v0] Server: LiFi quote request:", request)
 
     if (!LIFI_API_KEY) {
+      console.error("[v0] Server: LiFi API key not configured on server");
+      console.error("[v0] Server: Please set LIFI_API_KEY environment variable");
       throw new Error("LiFi API key not configured on server")
+    }
+    
+    console.log(`[v0] Server: LiFi API key configured (length: ${LIFI_API_KEY.length})`);
+
+    // Enhanced parameter validation and debugging
+    console.log("[v0] Server: Parameter validation:");
+    console.log(`[v0] Server: fromChain: ${request.fromChain} (type: ${typeof request.fromChain})`);
+    console.log(`[v0] Server: toChain: ${request.toChain} (type: ${typeof request.toChain})`);
+    console.log(`[v0] Server: fromToken: ${request.fromToken} (length: ${request.fromToken?.length})`);
+    console.log(`[v0] Server: toToken: ${request.toToken} (length: ${request.toToken?.length})`);
+    console.log(`[v0] Server: fromAmount: ${request.fromAmount} (type: ${typeof request.fromAmount})`);
+    console.log(`[v0] Server: fromAddress: ${request.fromAddress} (length: ${request.fromAddress?.length})`);
+
+    // Validate required parameters
+    if (!request.fromChain || !request.toChain || !request.fromToken || !request.toToken || !request.fromAmount || !request.fromAddress) {
+      console.error("[v0] Server: Missing required parameters:", {
+        fromChain: !!request.fromChain,
+        toChain: !!request.toChain,
+        fromToken: !!request.fromToken,
+        toToken: !!request.toToken,
+        fromAmount: !!request.fromAmount,
+        fromAddress: !!request.fromAddress
+      });
+      throw new Error("Missing required parameters: fromChain, toChain, fromToken, toToken, fromAmount, fromAddress")
     }
 
     const fromAmountNum = Number.parseFloat(request.fromAmount)
-    if (fromAmountNum <= 0) {
-      throw new Error("Invalid amount: must be greater than 0")
+    if (isNaN(fromAmountNum) || fromAmountNum <= 0) {
+      console.error(`[v0] Server: Invalid amount: ${request.fromAmount} (parsed: ${fromAmountNum})`);
+      throw new Error("Invalid amount: must be a valid number greater than 0")
+    }
+
+    // Validate token addresses (should be valid Ethereum addresses)
+    const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
+    if (!isValidAddress(request.fromToken)) {
+      console.error(`[v0] Server: Invalid fromToken address: ${request.fromToken}`);
+      throw new Error(`Invalid fromToken address: ${request.fromToken}`)
+    }
+    if (!isValidAddress(request.toToken)) {
+      console.error(`[v0] Server: Invalid toToken address: ${request.toToken}`);
+      throw new Error(`Invalid toToken address: ${request.toToken}`)
+    }
+    if (!isValidAddress(request.fromAddress)) {
+      console.error(`[v0] Server: Invalid fromAddress: ${request.fromAddress}`);
+      throw new Error(`Invalid fromAddress: ${request.fromAddress}`)
     }
 
     // Log for debugging
@@ -58,11 +100,24 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
       ...(request.allowExchanges && { allowExchanges: request.allowExchanges.join(",") }),
       ...(request.denyExchanges && { denyExchanges: request.denyExchanges.join(",") }),
       ...(request.preferExchanges && { preferExchanges: request.preferExchanges.join(",") }),
-      // IMPORTANT: Enable all route types for maximum compatibility
-      integrator: "splenex-dex",
+      integrator: "SPLENEX",
+      fee: "0.02", // 2% fee collection for Splenex
       allowSwitchChain: "true",
       maxPriceImpact: "0.5", // Allow up to 50% price impact for illiquid pairs
     })
+    
+    console.log("[v0] Server: Final LiFi API parameters:");
+    console.log(`[v0] Server: fromChain: ${request.fromChain}`);
+    console.log(`[v0] Server: toChain: ${request.toChain}`);
+    console.log(`[v0] Server: fromToken: ${request.fromToken}`);
+    console.log(`[v0] Server: toToken: ${request.toToken}`);
+    console.log(`[v0] Server: fromAmount: ${request.fromAmount}`);
+    console.log(`[v0] Server: fromAddress: ${request.fromAddress}`);
+    console.log(`[v0] Server: toAddress: ${request.toAddress || 'not provided'}`);
+    console.log(`[v0] Server: slippage: ${slippageDecimal}`);
+    console.log(`[v0] Server: order: ${request.order || 'not provided'}`);
+    console.log(`[v0] Server: integrator: SPLENEX`);
+    console.log(`[v0] Server: fee: 2% (0.02) - monetization enabled`);
     
     console.log("[v0] Server: ⚡ Using ALL available AMMs and bridges for routing")
     
@@ -71,6 +126,7 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 8000) // Faster timeout: 8s
 
+    console.log("[v0] Server: Making request to LiFi API...");
     const response = await fetch(`${LIFI_API_BASE}/quote?${params}`, {
       method: "GET",
       headers: {
@@ -79,13 +135,20 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
       },
       signal: controller.signal,
     })
+    
+    console.log(`[v0] Server: LiFi API response status: ${response.status}`);
 
     clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}))
+      console.error(`[v0] Server: LiFi API error (${response.status}):`, errorData);
+      console.error(`[v0] Server: Request URL was: ${LIFI_API_BASE}/quote?${params.toString()}`);
+      
       if (response.status === 400) {
-        throw new Error("Invalid request parameters - check token addresses and amounts")
+        const errorMsg = errorData.message || errorData.error || "Invalid request parameters";
+        console.error(`[v0] Server: LiFi 400 error details:`, errorData);
+        throw new Error(`Invalid request parameters - check token addresses and amounts. LiFi error: ${errorMsg}`)
       } else if (response.status === 404) {
         throw new Error("No routes available for this swap - try a different amount or token pair")
       } else {

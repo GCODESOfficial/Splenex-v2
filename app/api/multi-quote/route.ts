@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getMultiAggregatorQuote } from "@/lib/aggregator-quotes";
 
 /**
- * Multi-Aggregator Quote API
- * Tries multiple DEX aggregators (LiFi, 1inch, 0x, Paraswap)
- * Returns the best quote across all providers
+ * Enhanced Multi-Aggregator Quote API
+ * Tries comprehensive DEX aggregators including Solana, Cosmos, and chain-specific ones
+ * Returns the best quote across all providers with maximum token coverage
  */
 export async function GET(request: NextRequest) {
   try {

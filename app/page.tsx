@@ -36,7 +36,7 @@ interface Amm {
 export default function Page() {
   const [chains, setChains] = useState<any[]>([]);
   const [amms, setAmms] = useState<Amm[]>([]);
-  const { totalVolume, dailyData, yesterdayVolume, todayVolume } = useSwapVolume();
+  const { totalVolume, dailyData, yesterdayVolume, todayVolume, last24HoursVolume, last24HoursCount, isLoading: isVolumeLoading } = useSwapVolume();
   const { 
     totalUsers, 
     networkRevenue, 
@@ -49,11 +49,17 @@ export default function Page() {
   } = useSwapCount();
   const [activeRange, setActiveRange] = useState("3D");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Combined loading state
+  const isLoading = isVolumeLoading || isAnalyticsLoading || isSwapCountLoading;
 
   // Calculate percentage increase since yesterday (today vs yesterday)
+  // If there's today's data but no yesterday's data, show +100% (infinite growth)
   const percentageIncrease = yesterdayVolume > 0 
     ? ((todayVolume - yesterdayVolume) / yesterdayVolume) * 100 
-    : 0;
+    : todayVolume > 0 
+      ? 100 // +100% growth when there's data today but none yesterday
+      : 0; // 0% when there's no data at all
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -129,9 +135,22 @@ export default function Page() {
                 Trade Everything, Anytime
       </h1>
               <p className="text-gray-300 text-sm">
-                In the last 24 hours, Splenex recorded <span className="font-bold text-[#FCD404]">{isSwapCountLoading ? "..." : swapCount.toLocaleString()}</span> swaps 
-                with <span className="font-bold text-[#FCD404]">${totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> in trading volume 
-                up <span className={`font-bold ${percentageIncrease >= 0 ? "text-[#20E070]" : "text-red-500"}`}>{percentageIncrease >= 0 ? "+" : ""}{percentageIncrease.toFixed(1)}%</span> since yesterday.
+                In the last 24 hours, Splenex recorded <span className="font-bold text-[#FCD404]">{isVolumeLoading ? "..." : last24HoursCount.toLocaleString()}</span> swaps 
+                with <span className="font-bold text-[#FCD404]">${last24HoursVolume.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span> in trading volume
+                {!isNaN(percentageIncrease) && yesterdayVolume > 0 && (
+                  <span className="ml-1">
+                    {" "}(<span className={`font-bold ${percentageIncrease >= 0 ? "text-[#20E070]" : "text-red-500"}`}>
+                      {percentageIncrease >= 0 ? "+" : ""}{percentageIncrease.toFixed(1)}%
+                    </span>{" "}vs yesterday)
+                  </span>
+                )}
+                {!isNaN(percentageIncrease) && yesterdayVolume === 0 && todayVolume > 0 && (
+                  <span className="ml-1">
+                    {" "}(<span className="font-bold text-[#20E070]">
+                      +100.0%
+                    </span>{" "}vs yesterday - new data today)
+                  </span>
+                )}
               </p>
         </div>
             
@@ -334,11 +353,11 @@ export default function Page() {
                   <span>Cross-Market Swap</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-1 h-4 bg-[#786501]" style={{ backgroundColor: "#6B6F00" }}></span>
+                  <span className="w-1 h-4 bg-[#32CD32]"></span>
                   <span>sFund DAO Stakers</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="w-1 h-4 bg-[#FFB44F]"></span>
+                  <span className="w-1 h-4 bg-[#FF6347]"></span>
                   <span>sNFT</span>
                 </li>
               </ul>

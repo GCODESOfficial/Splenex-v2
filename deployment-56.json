@@ -1,0 +1,10 @@
+{
+  "chainId": 56,
+  "network": "BSC Mainnet",
+  "contractAddress": "0x6e07AecF693B9F6E69e3e8d3b1F3dcD39b483A21",
+  "revenueWallet": "0xD9BD71AA48872430c54730a2D412918aB01cB1cC",
+  "transactionHash": "0x8a6aea0f1903ef2dc1b66e53aa9e801243d49b0e399afeb289f01e8bf3458340",
+  "deployer": "0x29d75C4D23FE5041E2AA86D06dA3e53DDD3c5978",
+  "gasUsed": "2100000",
+  "timestamp": "2025-10-27T10:16:11.202Z"
+}

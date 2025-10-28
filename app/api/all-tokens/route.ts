@@ -156,7 +156,7 @@ const CHAIN_MAPPING = {
   "thundercore": { chainId: 108, chainName: "ThunderCore", symbol: "TT" },
   
   // Non-EVM Chains
-  "solana": { chainId: 99998, chainName: "Solana", symbol: "SOL" },
+  "solana": { chainId: 101, chainName: "Solana", symbol: "SOL" },
   "tron": { chainId: 195, chainName: "Tron", symbol: "TRX" },
   "cosmos": { chainId: 99999, chainName: "Cosmos", symbol: "ATOM" },
   "osmosis": { chainId: 42161, chainName: "Osmosis", symbol: "OSMO" },
@@ -452,7 +452,7 @@ async function addPopularTokensFromCoinGecko(allTokens: TokenWithChains[]) {
             '43114': 'Avalanche',
             '250': 'Fantom',
             '8453': 'Base',
-            '99998': 'Solana',
+            '101': 'Solana',
             '99999': 'Cosmos',
           };
 
@@ -499,7 +499,7 @@ async function addPopularTokens(allTokens: TokenWithChains[]) {
     { symbol: "ETH", name: "Ethereum", id: "ethereum", chains: [{ chainId: 1, chainName: "Ethereum", address: "native", decimals: 18 }] },
     { symbol: "BNB", name: "BNB", id: "binancecoin", chains: [{ chainId: 56, chainName: "BSC", address: "native", decimals: 18 }] },
     { symbol: "ADA", name: "Cardano", id: "cardano", chains: [{ chainId: 2001, chainName: "Cardano", address: "native", decimals: 6 }] },
-    { symbol: "SOL", name: "Solana", id: "solana", chains: [{ chainId: 99998, chainName: "Solana", address: "native", decimals: 9 }] },
+    { symbol: "SOL", name: "Solana", id: "solana", chains: [{ chainId: 101, chainName: "Solana", address: "native", decimals: 9 }] },
     { symbol: "DOT", name: "Polkadot", id: "polkadot", chains: [{ chainId: 2001, chainName: "Polkadot", address: "native", decimals: 10 }] },
     { symbol: "MATIC", name: "Polygon", id: "matic-network", chains: [{ chainId: 137, chainName: "Polygon", address: "native", decimals: 18 }] },
     { symbol: "AVAX", name: "Avalanche", id: "avalanche-2", chains: [{ chainId: 43114, chainName: "Avalanche", address: "native", decimals: 18 }] },
@@ -514,13 +514,13 @@ async function addPopularTokens(allTokens: TokenWithChains[]) {
     { symbol: "SHIB", name: "Shiba Inu", id: "shiba-inu", chains: [{ chainId: 1, chainName: "Ethereum", address: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE", decimals: 18 }] },
     { symbol: "DOGE", name: "Dogecoin", id: "dogecoin", chains: [{ chainId: 0, chainName: "Dogecoin", address: "native", decimals: 8 }] },
     { symbol: "FLOKI", name: "Floki", id: "floki", chains: [{ chainId: 1, chainName: "Ethereum", address: "0xcf0C122c6b73ff809C693DB761e7BaeBe62b6a2E", decimals: 9 }] },
-    { symbol: "BONK", name: "Bonk", id: "bonk", chains: [{ chainId: 99998, chainName: "Solana", address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", decimals: 5 }] },
+    { symbol: "BONK", name: "Bonk", id: "bonk", chains: [{ chainId: 101, chainName: "Solana", address: "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263", decimals: 5 }] },
     
     // Additional Solana tokens
-    { symbol: "USDC", name: "USD Coin", id: "usd-coin-solana", chains: [{ chainId: 99998, chainName: "Solana", address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", decimals: 6 }] },
-    { symbol: "USDT", name: "Tether USD", id: "tether-solana", chains: [{ chainId: 99998, chainName: "Solana", address: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", decimals: 6 }] },
-    { symbol: "RAY", name: "Raydium", id: "raydium", chains: [{ chainId: 99998, chainName: "Solana", address: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R", decimals: 6 }] },
-    { symbol: "SRM", name: "Serum", id: "serum", chains: [{ chainId: 99998, chainName: "Solana", address: "SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt", decimals: 6 }] },
+    { symbol: "USDC", name: "USD Coin", id: "usd-coin-solana", chains: [{ chainId: 101, chainName: "Solana", address: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", decimals: 6 }] },
+    { symbol: "USDT", name: "Tether USD", id: "tether-solana", chains: [{ chainId: 101, chainName: "Solana", address: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", decimals: 6 }] },
+    { symbol: "RAY", name: "Raydium", id: "raydium", chains: [{ chainId: 101, chainName: "Solana", address: "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R", decimals: 6 }] },
+    { symbol: "SRM", name: "Serum", id: "serum", chains: [{ chainId: 101, chainName: "Solana", address: "SRMuApVNdxXokk5GT7XD5cUUgXMBCoAz2LHeuAoKWRt", decimals: 6 }] },
     
     // Cosmos tokens
     { symbol: "OSMO", name: "Osmosis", id: "osmosis", chains: [{ chainId: 99999, chainName: "Cosmos", address: "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817", decimals: 6 }] },

@@ -5,6 +5,8 @@
  */
 
 import { ChainConfig, ChainType, getAllEnabledChains } from "./chains-config"
+import { covalentGoldRushService } from "./covalent-goldrush-service"
+import { moralisService } from "./moralis-service"
 
 export interface TokenBalance {
   symbol: string
@@ -39,68 +41,75 @@ export async function fetchMultiChainBalances(
   const allTokens: TokenBalance[] = []
   let completedChains = 0
 
-  // Fetch balances from all chains in parallel
-  const chainPromises = allChains.map(async (chain) => {
-    try {
-      console.log(`[MultiChain] Fetching ${chain.name}...`)
-      
-      let tokens: TokenBalance[] = []
+  // Process chains in parallel batches for better performance
+  const BATCH_SIZE = 3
+  const chainBatches = []
+  for (let i = 0; i < allChains.length; i += BATCH_SIZE) {
+    chainBatches.push(allChains.slice(i, i + BATCH_SIZE))
+  }
 
-      switch (chain.type) {
-        case ChainType.EVM:
-          tokens = await fetchEVMChainBalances(chain, walletAddress)
-          break
-        case ChainType.SOLANA:
-          tokens = await fetchSolanaBalances(chain, walletAddress)
-          break
-        case ChainType.TON:
-          tokens = await fetchTONBalances(chain, walletAddress)
-          break
-        case ChainType.COSMOS:
-          tokens = await fetchCosmosBalances(chain, walletAddress)
-          break
-        case ChainType.TRON:
-          tokens = await fetchTronBalances(chain, walletAddress)
-          break
-        case ChainType.NEAR:
-          tokens = await fetchNearBalances(chain, walletAddress)
-          break
-        case ChainType.APTOS:
-          tokens = await fetchAptosBalances(chain, walletAddress)
-          break
-        case ChainType.SUI:
-          tokens = await fetchSuiBalances(chain, walletAddress)
-          break
-        default:
-          console.warn(`[MultiChain] Chain type ${chain.type} not yet implemented`)
+  for (const batch of chainBatches) {
+    // Process each batch in parallel
+    const batchPromises = batch.map(async (chain) => {
+      try {
+        console.log(`[MultiChain] Fetching ${chain.name}...`)
+        
+        let tokens: TokenBalance[] = []
+
+        switch (chain.type) {
+          case ChainType.EVM:
+            tokens = await fetchEVMChainBalances(chain, walletAddress)
+            break
+          case ChainType.SOLANA:
+            tokens = await fetchSolanaBalances(chain, walletAddress)
+            break
+          case ChainType.TON:
+            tokens = await fetchTONBalances(chain, walletAddress)
+            break
+          case ChainType.COSMOS:
+            tokens = await fetchCosmosBalances(chain, walletAddress)
+            break
+          case ChainType.TRON:
+            tokens = await fetchTronBalances(chain, walletAddress)
+            break
+          case ChainType.NEAR:
+            tokens = await fetchNearBalances(chain, walletAddress)
+            break
+          case ChainType.APTOS:
+            tokens = await fetchAptosBalances(chain, walletAddress)
+            break
+          case ChainType.SUI:
+            tokens = await fetchSuiBalances(chain, walletAddress)
+            break
+          default:
+            console.warn(`[MultiChain] Chain type ${chain.type} not yet implemented`)
+        }
+
+        return { chain: chain.name, tokens }
+      } catch (error) {
+        console.error(`[MultiChain] Error fetching ${chain.name}:`, error)
+        return { chain: chain.name, tokens: [] }
       }
+    })
 
-      completedChains++
-      if (onProgress) {
-        onProgress({
-          chain: chain.name,
-          done: completedChains,
-          total: allChains.length,
-        })
+    // Wait for batch to complete
+    const batchResults = await Promise.allSettled(batchPromises)
+    
+    batchResults.forEach((result) => {
+      if (result.status === "fulfilled") {
+        allTokens.push(...result.value.tokens)
+        completedChains++
+        
+        if (onProgress) {
+          onProgress({
+            chain: result.value.chain,
+            done: completedChains,
+            total: allChains.length,
+          })
+        }
       }
-
-      return tokens
-    } catch (error) {
-      console.error(`[MultiChain] Error fetching ${chain.name}:`, error)
-      completedChains++
-      if (onProgress) {
-        onProgress({
-          chain: chain.name,
-          done: completedChains,
-          total: allChains.length,
-        })
-      }
-      return []
-    }
-  })
-
-  const results = await Promise.all(chainPromises)
-  results.forEach((tokens) => allTokens.push(...tokens))
+    })
+  }
 
   // Calculate total USD value
   const totalUsdValue = allTokens.reduce((sum, token) => sum + token.usdValue, 0)
@@ -126,16 +135,17 @@ async function fetchEVMChainBalances(
   const tokens: TokenBalance[] = []
 
   try {
-    // Try Moralis API first
-    if (chain.moralisChain) {
-      const moralisTokens = await fetchFromMoralis(chain, walletAddress)
-      tokens.push(...moralisTokens)
-    }
-
-    // If Moralis fails or doesn't have the chain, use RPC
-    if (tokens.length === 0) {
+    // Try Moralis API first (primary provider - already configured and working)
+    const moralisResult = await fetchFromMoralis(chain, walletAddress)
+    
+    // Check if Moralis returned an error (empty array with error) or no tokens
+    if (moralisResult.success === false) {
+      console.log(`[MultiChain] Moralis unavailable for ${chain.name}, trying RPC...`)
       const rpcTokens = await fetchFromEVMRPC(chain, walletAddress)
       tokens.push(...rpcTokens)
+    } else {
+      // Moralis succeeded - use its results
+      tokens.push(...moralisResult.tokens)
     }
 
     return tokens
@@ -146,62 +156,30 @@ async function fetchEVMChainBalances(
 }
 
 /**
- * Fetch from Moralis API (supports 30+ EVM chains)
+ * Fetch from Moralis API (primary provider - already configured and working)
+ * Returns an object with success flag and tokens array
  */
 async function fetchFromMoralis(
   chain: ChainConfig,
   walletAddress: string
-): Promise<TokenBalance[]> {
+): Promise<{ success: boolean; tokens: TokenBalance[]; error?: string }> {
   try {
-    const response = await fetch(
-      `/api/tokens?address=${walletAddress}&chain=${chain.moralisChain}`
-    )
-
-    if (!response.ok) {
-      throw new Error(`Moralis API failed: ${response.status}`)
-    }
-
-    const data = await response.json()
-
-    if (!data.result || data.result.length === 0) {
-      return []
-    }
-
-    // Get prices for all tokens
-    const symbols = data.result.map((t: any) => t.symbol?.toUpperCase()).filter(Boolean)
-    const prices = await fetchTokenPrices(symbols)
-
-    const tokens: TokenBalance[] = data.result
-      .filter((token: any) => token.balance && parseInt(token.balance) > 0)
-      .map((token: any) => {
-        const decimals = parseInt(token.decimals) || 18
-        const balance = parseInt(token.balance) / Math.pow(10, decimals)
-        const price = prices[token.symbol?.toUpperCase()] || 0
-        const usdValue = balance * price
-
-        return {
-          symbol: token.symbol || "UNKNOWN",
-          name: token.name || "Unknown Token",
-          balance: balance.toFixed(6),
-          usdValue,
-          price,
-          address: token.token_address,
-          chain: chain.name,
-          chainId: chain.chainId as string,
-          decimals,
-          logo: token.logo || chain.logo,
-        }
-      })
-
-    return tokens
+    console.log(`[MultiChain] 🎯 Attempting Moralis for ${chain.name}`)
+    
+    const tokens = await moralisService.getTokenBalances(walletAddress, chain.name)
+    
+    console.log(`[MultiChain] ✅ Moralis found ${tokens.length} tokens for ${chain.name}`)
+    return { success: true, tokens }
   } catch (error) {
-    console.error(`[MultiChain] Moralis error for ${chain.name}:`, error)
-    return []
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+    console.error(`[MultiChain] ❌ Moralis error for ${chain.name}:`, errorMessage)
+    return { success: false, tokens: [], error: errorMessage }
   }
 }
 
+
 /**
- * Fetch from EVM RPC directly
+ * Fetch from EVM RPC directly with parallel optimization
  */
 async function fetchFromEVMRPC(
   chain: ChainConfig,
@@ -210,8 +188,8 @@ async function fetchFromEVMRPC(
   const tokens: TokenBalance[] = []
 
   try {
-    // Fetch native token balance
-    for (const rpcUrl of chain.rpc) {
+    // Try all RPC endpoints in parallel for faster response
+    const rpcPromises = chain.rpc.map(async (rpcUrl) => {
       try {
         const response = await fetch(rpcUrl, {
           method: "POST",
@@ -227,31 +205,41 @@ async function fetchFromEVMRPC(
         const data = await response.json()
         if (data.result) {
           const balanceInEth = parseInt(data.result, 16) / Math.pow(10, 18)
-          
-          if (balanceInEth > 0) {
-            const prices = await fetchTokenPrices([chain.symbol])
-            const price = prices[chain.symbol] || 0
-            const usdValue = balanceInEth * price
-
-            tokens.push({
-              symbol: chain.symbol,
-              name: chain.name,
-              balance: balanceInEth.toFixed(6),
-              usdValue,
-              price,
-              address: "native",
-              chain: chain.name,
-              chainId: chain.chainId as string,
-              decimals: 18,
-              logo: chain.logo,
-            })
-          }
-          break
+          return { balance: balanceInEth, rpc: rpcUrl }
         }
+        return null
       } catch (error) {
-        console.error(`[MultiChain] RPC error for ${rpcUrl}:`, error)
-        continue
+        console.warn(`[MultiChain] RPC ${rpcUrl} failed:`, error)
+        return null
       }
+    })
+
+    // Wait for first successful response
+    const results = await Promise.allSettled(rpcPromises)
+    const successfulResult = results
+      .filter((result): result is PromiseFulfilledResult<{ balance: number; rpc: string } | null> => 
+        result.status === 'fulfilled' && result.value !== null
+      )
+      .map(result => result.value)[0]
+
+    if (successfulResult && successfulResult.balance > 0) {
+      // Fetch price in parallel with balance check
+      const pricePromise = fetchTokenPrices([chain.symbol])
+      const price = (await pricePromise)[chain.symbol] || 0
+      const usdValue = successfulResult.balance * price
+
+      tokens.push({
+        symbol: chain.symbol,
+        name: chain.name,
+        balance: successfulResult.balance.toFixed(6),
+        usdValue,
+        price,
+        address: "native",
+        chain: chain.name,
+        chainId: chain.chainId as string,
+        decimals: 18,
+        logo: chain.logo,
+      })
     }
 
     return tokens

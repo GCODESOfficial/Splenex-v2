@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
             'avalanche': '43114',
             'fantom': '250',
             'base': '8453',
-            'solana': '99998',
+            'solana': '101',
             'cosmos': '99999',
           };
 
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
       contractAddresses['56'] = { address: '0x0000000000000000000000000000000000000000', decimals: 18, platform: 'binance-smart-chain' };
     } else if (tokenData.id === 'solana') {
       // Solana native token - use the correct native address format
-      contractAddresses['99998'] = { address: 'native', decimals: 9, platform: 'solana' };
+      contractAddresses['101'] = { address: 'native', decimals: 9, platform: 'solana' };
     } else if (tokenData.id === 'cosmos') {
       contractAddresses['99999'] = { address: 'native', decimals: 6, platform: 'cosmos' };
     }

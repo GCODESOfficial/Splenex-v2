@@ -115,10 +115,13 @@ const UNIVERSAL_TOKENS = {
   
   // Low-cap tokens
   TWC: {
-    56: "0x4B0F1812e5Df2A09796481Ff14017e6005508003",
+    56: "0xda1060158f7d593667cce0a15db346bb3ffb3596", // CORRECT TWC address
   },
-  TKC: {
-    56: "0x4B0F1812e5Df2A09796481Ff14017e6005508003", // Same as TWC
+  TWT: {
+    56: "0x4b0f1812e5df2a09796481ff14017e6005508003", // CORRECT TWT address
+  },
+  WKC: {
+    56: "0xda1060158f7d593667cce0a15db346bb3ffb3596", // Same as TWC - needs verification
   },
   PEPE: {
     1: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
