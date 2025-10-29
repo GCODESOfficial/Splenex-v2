@@ -30,7 +30,7 @@ const menuItems: MenuItem[] = [
   { name: "sNFT", href: "/snft", icon: "/images/icons/nft.svg" },
 ];
 
-export default function Sidebar( {
+export default function Sidebar({
   mobileOpen = false,
   onClose,
 }: {
@@ -53,91 +53,95 @@ export default function Sidebar( {
 
   return (
     <>
-    <div
-      className={`bg-gradient-to-r from-[#0B0B0C] to-[#131313] text-white hidden md:flex flex-col pb-16 z-50 ${
-        collapsed ? "w-20 " : "w-52 "
-      } transition-all duration-300`}
-    >
-      {/* Logo */}
-      <div className="flex items-center justify-between p-4 pt-6 pb-6">
-        {collapsed ? (
-          <Image
-            src="/images/logo-collapsed.svg"
-            alt="logo collapsed"
-            width={24}
-            height={24}
-          />
-        ) : (
-          <Image
-            src="/images/logo.svg"
-            alt="logo expanded"
-            width={130}
-            height={28}
-          />
-        )}
-      </div>
-
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center gap-3 ml-4  mt-4 pl-4 py-3 border-t-[#B79B08] border-t"
+      <div
+        className={`bg-gradient-to-r from-[#0B0B0C] to-[#131313] text-white hidden md:flex flex-col pb-16 z-50 ${
+          collapsed ? "w-20 " : "w-52 "
+        } transition-all duration-300`}
       >
-        {collapsed ? (
-          <span className="text-[#FCD404]">▶</span>
-        ) : (
-          <>
-            <span className="text-[#FCD404]">◀</span>
-            <span className="text-[#C7C7C7]">Collapse</span>
-          </>
-        )}
-      </button>
+        {/* Logo */}
+        <div className="flex items-center justify-between p-4 pt-6 pb-6">
+          {collapsed ? (
+            <Image
+              src="/images/logo-collapsed.svg"
+              alt="logo collapsed"
+              width={24}
+              height={24}
+            />
+          ) : (
+            <Image
+              src="/images/logo.svg"
+              alt="logo expanded"
+              width={130}
+              height={28}
+            />
+          )}
+        </div>
 
-      {/* Menu */}
-      <nav className="flex-1 ">
-        {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          className="flex items-center gap-3 ml-4  mt-4 pl-4 py-3 border-t-[#B79B08] border-t"
+        >
+          {collapsed ? (
+            <span className="text-[#FCD404]">▶</span>
+          ) : (
+            <>
+              <span className="text-[#FCD404]">◀</span>
+              <span className="text-[#C7C7C7]">Collapse</span>
+            </>
+          )}
+        </button>
 
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center px-4 py-5 relative transition-colors ml-4  ${
-                isActive
-                  ? "text-black bg-yellow-400"
-                  : "text-[#C7C7C7] border-t-[#B79B08] border-t"
-              }`}
-            >
-              {/* Active indicator triangle */}
-              {isActive && (
-                <span
-                  className={`absolute top-1/2 -translate-y-1/2 w-0 h-0
+        {/* Menu */}
+        <nav className="flex-1 ">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.href;
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center px-4 py-5 relative transition-colors ml-4  ${
+                  isActive
+                    ? "text-black bg-yellow-400"
+                    : "text-[#C7C7C7] border-t-[#B79B08] border-t"
+                }`}
+              >
+                {/* Active indicator triangle */}
+                {isActive && (
+                  <span
+                    className={`absolute top-1/2 -translate-y-1/2 w-0 h-0
       ${
         collapsed
           ? "border-t-[29.5px] border-b-[29.5px] border-l-[29.5px] -right-[29px]"
           : "border-t-[32.5px] border-b-[32.5px] border-l-[32.5px] -right-8"
       }
       border-t-transparent border-b-transparent border-l-yellow-400`}
-                ></span>
-              )}
+                  ></span>
+                )}
 
-              <Image
-                src={item.icon}
-                alt={item.name}
-                width={18}
-                height={18}
-                className={`mr-3 ${
-                  isActive ? "brightness-0" : "brightness-100"
-                }`}
-              />
+                <Image
+                  src={item.icon}
+                  alt={item.name}
+                  width={18}
+                  height={18}
+                  className={`mr-3 ${
+                    isActive ? "brightness-0" : "brightness-100"
+                  }`}
+                />
 
-              {!collapsed && (
-                <span className={`${isActive ? "text-black font-medium" : "text-[#C7C7C7]"}`}>
-                  {item.name}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </nav>
+                {!collapsed && (
+                  <span
+                    className={`${
+                      isActive ? "text-black font-medium" : "text-[#C7C7C7]"
+                    }`}
+                  >
+                    {item.name}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
       </div>
 
       {/* === Mobile Sidebar Added === */}
@@ -170,7 +174,9 @@ export default function Sidebar( {
                   alt={item.name}
                   width={18}
                   height={18}
-                  className={`mr-3 ${isActive ? "brightness-0" : "brightness-100"}`}
+                  className={`mr-3 ${
+                    isActive ? "brightness-0" : "brightness-100"
+                  }`}
                 />
                 <span>{item.name}</span>
               </Link>
@@ -186,6 +192,5 @@ export default function Sidebar( {
         ></div>
       )}
     </>
-    
   );
 }

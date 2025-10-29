@@ -125,10 +125,10 @@ export default function Page() {
   }, [totalVolume])
 
   return (
-    <div className="min-h-screen bg-black text-white px-8">
+    <div className="min-h-screen bg-black text-white px-4 md:px-8">
       {/* Header */}
       <div className="">
-        <div className=" mx-auto px-6 py-0">
+        <div className=" mx-auto md:px-6 py-0">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-white mb-1">
@@ -160,10 +160,10 @@ export default function Page() {
       </div>
 
       {/* Main Content */}
-      <div className=" mx-auto px-6 py-8 space-y-8">
+      <div className="mx-auto px-0 md:px-6 py-8 md:space-y-8">
         
         {/* Metrics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-1">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-1">
           {/* SPX Token Price Card - Highlighted */}
           <div className="flex flex-col  justify-center p-4  min-h-[120px] bg-gradient-to-br from-[#FFD600] to-[#F3DA5F] text-black">
             <div className="flex items-center justify-start w-12 h-12 mb-3">
