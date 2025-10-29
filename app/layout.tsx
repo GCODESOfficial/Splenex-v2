@@ -53,8 +53,8 @@ export const metadata = {
     site: "@Splenex",
     creator: "@Splenex",
     images: ["/images/metadata.jpg"],
-  }
-}
+  },
+};
 
 export default function RootLayout({
   children,
@@ -71,27 +71,24 @@ export default function RootLayout({
             <SecondaryWalletProvider>
               <SimpleNavbar />
 
-            {/* Layout Wrapper (fills viewport minus navbar & footer height) */}
-            <div className="flex flex-row pb-14 md:h-[calc(100vh)] md:overflow-hidden">
+              {/* Layout Wrapper (fills viewport minus navbar & footer height) */}
+              <div className="flex flex-row pb-14 md:h-[calc(100vh)] md:overflow-hidden">
+                {/* Sidebar */}
+                <aside className=" overflow-y-scroll  overflow-x-hidden bg-[#000000] z-40 sidebar-scroll hidden md:block">
+                  <Sidebar />
+                </aside>
 
-              {/* Sidebar */}
-              <aside
-                className=" overflow-y-scroll  overflow-x-hidden bg-[#000000] z-40 sidebar-scroll hidden md:block"
-              >
-                <Sidebar />
-              </aside>
+                {/* Main Content */}
+                <main className="flex-1 overflow-y-auto pt-16 text-white w-full ">
+                  {children}
+                  <CustomToaster />
+                </main>
+              </div>
 
-              {/* Main Content */}
-              <main className="flex-1 overflow-y-auto pt-16 text-white w-full ">
-                {children}
-                <CustomToaster />
-              </main>
-            </div>
-
-            {/* Fixed Footer */}
-            <footer className="md:fixed bottom-0 left-0 w-full z-40 border-t-[#B79B08] border-t">
-              <Footer />
-            </footer>
+              {/* Fixed Footer */}
+              <footer className="md:fixed bottom-0 left-0 w-full z-40 border-t-[#B79B08] border-t">
+                <Footer />
+              </footer>
             </SecondaryWalletProvider>
           </WalletProvider>
         </SecurityProvider>

@@ -602,18 +602,18 @@ export default function TradingLeaderboard() {
 
         {/* ✅ Table */}
         <div className="bg-[#121214] overflow-hidden max-w-[95%] mx-auto">
-          <table className="w-full text-left text-sm">
+          <table className="w-full overflow-x-auto text-left text-sm">
             <thead className="text-[#C7C7C7] font-medium text-sm">
               <tr>
                 <th className="px-4 py-3">Rank</th>
                 <th className="px-4 py-3">Wallet Address</th>
-                <th className="px-4 py-3 hidden md:table-cell">
+                <th className="px-4 py-3">
                   Trading Volume
                 </th>
-                <th className="px-4 py-3 hidden md:table-cell">
+                <th className="px-4 py-3">
                   Transaction Count
                 </th>
-                <th className="px-4 py-3 hidden md:table-cell">Active Days</th>
+                <th className="px-4 py-3">Active Days</th>
               </tr>
             </thead>
             <tbody>
@@ -636,13 +636,13 @@ export default function TradingLeaderboard() {
                   <td className="px-4 py-3 text-gray-300">
                     {hideWallet(row.wallet)}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-4 py-3">
                     {row.tradingVolume}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-4 py-3">
                     {row.transactionCount}
                   </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
+                  <td className="px-4 py-3">
                     {row.activeDays}
                   </td>
                 </tr>

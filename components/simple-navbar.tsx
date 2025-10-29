@@ -34,17 +34,13 @@ export function SimpleNavbar() {
 
   return (
     <>
-      <nav className="   w-full h-16 bg-black flex items-center justify-between md:justify-end px-4 md:px-14 fixed top-0 z-40 ">
-
+      <nav className=" w-full h-16 bg-black flex items-center justify-between md:justify-end px-2 md:px-14 fixed top-0 z-40 ">
         <div className="md:hidden">
-<Image src="/images/logo.svg" alt="logo" width={100} height={24} />
-
-
+          <Image src="/images/logo.svg" alt="logo" width={100} height={24} />
         </div>
 
-
         {/* Wallet Section */}
-        <div className="flex items-center md:gap-3">
+        <div className="flex items-center gap-2 md:gap-3">
           {!isConnected ? (
             <Button
               onClick={() => setShowWalletModal(true)}
@@ -60,9 +56,7 @@ export function SimpleNavbar() {
             </Button>
           ) : (
             <div className="flex items-center md:gap-3 gap-1 md:bg-[#0D0D0D] px-1 py-2">
-              <button
-                className="bg-[#121212] md:p-3 p-2 py-1.5 md:py-3 rounded-none"
-              >
+              <button className="bg-[#121212] md:p-3 p-2 py-1.5 md:py-3 rounded-none">
                 <a href="/apemode">
                   <img
                     src="/images/apemode.svg"
@@ -73,9 +67,8 @@ export function SimpleNavbar() {
               </button>
 
               <div className="border md:border-none border-[#FCD404] flex md:gap-3  p-1 md:p-0">
-
-              <BalanceDisplay />
-              <WalletDropdown />
+                <BalanceDisplay />
+                <WalletDropdown />
               </div>
             </div>
           )}
