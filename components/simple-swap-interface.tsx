@@ -115,14 +115,6 @@ const formatUsdValue = (usdValue: number): string => {
   return `$${usdValue.toFixed(2)}`;
 };
 
-// Helper function to format balance to 5 decimal places
-const formatBalance = (balance: string | undefined): string => {
-  if (!balance) return '0.00000';
-  const num = Number.parseFloat(balance);
-  if (isNaN(num)) return '0.00000';
-  return num.toFixed(5);
-};
-
 // Helper function to create simulated quotes for low liquidity tokens
 const createSimulatedQuote = (fromAmountWei: string, fromToken: Token, toToken: Token): string => {
   // Convert Wei to actual token amount
@@ -2586,11 +2578,11 @@ export function SimpleSwapInterface() {
                       {isConnected && fromToken.balance && (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-400 text-sm hidden md:block">
-                            Balance: {formatBalance(fromToken.balance)}
+                            Balance: {fromToken.balance}
                           </span>
 
                           <span className="text-gray-400 text-sm md:hidden">
-                            Bal: {formatBalance(fromToken.balance)}
+                            Bal: {fromToken.balance}
                           </span>
                           <div className="flex space-x-1">
                             <Button
@@ -2835,12 +2827,8 @@ export function SimpleSwapInterface() {
                       <span className="text-gray-400">{formatUsdValue(fromDisplayUsdValue)}</span>
                       {isConnected && fromToken.balance && (
                         <div className="flex items-center space-x-2">
-                          <span className="text-gray-400 text-sm hidden md:block">
-                            Balance: {formatBalance(fromToken.balance)}
-                          </span>
-
-                          <span className="text-gray-400 text-sm md:hidden">
-                            Bal: {formatBalance(fromToken.balance)}
+                          <span className="text-gray-400">
+                            Balance: {fromToken.balance}
                           </span>
                           <div className="flex space-x-1">
                             <Button
