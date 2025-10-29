@@ -103,34 +103,41 @@ function RankCardModal({
     const blob = await response.blob();
     const file = new File([blob], "splenex-leaderboard.png", { type: "image/png" });
 
-    // Try Web Share API first (works on mobile and some desktop browsers)
-    if (navigator.share && navigator.canShare) {
+    // Check if Web Share API is supported
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
-        // Check if we can share files
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            text: text,
-            files: [file],
-          });
-          return; // Successfully shared via native share
-        }
+        // Use Web Share API to share with image
+        await navigator.share({
+          title: "My Splenex Leaderboard Achievement",
+          text: text,
+          files: [file],
+        });
       } catch (error) {
-        // User cancelled or error - fall through to fallback
-        console.log("Web Share cancelled or failed, using fallback");
+        console.error("Error sharing:", error);
+        // Fallback: download and open Twitter
+        const link = document.createElement("a");
+        link.download = `splenex-leaderboard-${walletFull.slice(0, 8)}.png`;
+        link.href = dataUrl;
+        link.click();
+        
+        setTimeout(() => {
+          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=Splenex,Trading,Leaderboard`;
+          window.open(twitterUrl, "_blank");
+        }, 100);
       }
+    } else {
+      // Fallback for browsers that don't support Web Share API
+      // Download the image and open Twitter
+      const link = document.createElement("a");
+      link.download = `splenex-leaderboard-${walletFull.slice(0, 8)}.png`;
+      link.href = dataUrl;
+      link.click();
+      
+      setTimeout(() => {
+        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=Splenex,Trading,Leaderboard`;
+        window.open(twitterUrl, "_blank");
+      }, 100);
     }
-
-    // Fallback: Download image and open Twitter
-    const link = document.createElement("a");
-    link.download = `splenex-leaderboard-${walletFull.slice(0, 8)}.png`;
-    link.href = dataUrl;
-    link.click();
-    
-    // Open Twitter in new tab with pre-filled text
-    setTimeout(() => {
-      const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=Splenex,Trading,Leaderboard`;
-      window.open(twitterUrl, "_blank");
-    }, 300);
   };
 
   return (
@@ -156,10 +163,10 @@ function RankCardModal({
           <h2 className="text-4xl font-bold text-white mb-3">Congratulations</h2>
           <p className="text-[#C7C7C7] text-base leading-relaxed">
             Your Wallet{" "}
-            <span className="text-[#B1B1B1] text-2xl font-semibold">{wallet}</span>{" "}
+            <span className="text-white text-2xl font-semibold">{wallet}</span>{" "}
             ranks
             <br />
-            <span className="text-[#FFD600] text-2xl font-bold">
+            <span className="text-[#FFD600] font-bold">
               {rank}/{total}
             </span>{" "}
             on the Splenex Trading
@@ -281,29 +288,27 @@ function SorryModal({
       <div className="relative flex flex-col items-center">
         <button
           onClick={onClose}
-          className="absolute top-6 right-2 bg-[#FCD404] z-50 text-gray-400 hover:text-white"
+          className="absolute top-6 right-2 bg-red-500 z-50 text-gray-400 hover:text-white"
         >
           <X size={22} />
         </button>
 
         {/* Red top Section */}
-        <div className="bg-[#FCD404] h-4 w-xs shadow-lg"></div>
+        <div className="bg-[#FF4D4F] h-4 w-xs shadow-lg"></div>
 
         {/* Dark Main Section */}
-        <div className="bg-[#121214] border border-[#FCD404] text-center px-10 py-20 max-w-3xl shadow-xl z-10">
-          <h2 className="text-4xl font-bold text-white mb-3">Almost There!</h2>
+        <div className="bg-[#121214] border border-[#FF4D4F] text-center px-10 py-20 max-w-3xl shadow-xl z-10">
+          <h2 className="text-4xl font-bold text-white mb-3">Sorry</h2>
           <p className="text-[#C7C7C7] text-base leading-relaxed">
             {wallet ? (
               <>
                 Your Wallet{" "}
                 <span className="text-white text-2xl font-semibold">{wallet}</span>{" "}
-                hasn’t
+                is not found
                 <br />
-                made it to the Splenex Trading 
+                in the Splenex Trading
                 <br />
-                Leaderboard yet. Keep trading to 
-                <br/>
-                earn a spot!Your Wallet 
+                Leaderboard.
               </>
             ) : (
               <>
@@ -320,13 +325,13 @@ function SorryModal({
           <div className="flex flex-col md:flex-row justify-center items-center gap-3 mt-8 translate-y-10 w-full md:w-auto">
             <button 
               onClick={onClose}
-              className="border border-[#FCD404] text-white font-medium px-8 py-4 text-sm hover:bg-[#FCD404] hover:text-black transition-all w-full md:w-auto"
+              className="border border-[#FF4D4F] text-white font-medium px-8 py-4 text-sm hover:bg-[#FF4D4F] hover:text-black transition-all w-full md:w-auto"
             >
               Try Again
             </button>
             <button 
               onClick={onClose}
-              className="bg-[#191919] border border-[#1F1F1F] text-white font-medium px-8 py-4 text-sm hover:bg-[#2A2A2A] transition-all w-full md:w-auto"
+              className="bg-[#1F1F1F] border border-[#1F1F1F] text-white font-medium px-8 py-4 text-sm hover:bg-[#2A2A2A] transition-all w-full md:w-auto"
             >
               Close
             </button>
@@ -334,7 +339,7 @@ function SorryModal({
         </div>
 
         {/* Red Bottom Section */}
-        <div className="bg-[#FCD404] h-4 w-xs shadow-lg"></div>
+        <div className="bg-[#FF4D4F] h-4 w-xs shadow-lg"></div>
       </div>
     </div>
   );
@@ -597,11 +602,11 @@ export default function TradingLeaderboard() {
 
         {/* ✅ Table */}
         <div className="bg-[#121214] overflow-hidden max-w-[95%] mx-auto">
-          <table className="w-full text-center text-sm">
+          <table className="w-full text-left text-sm">
             <thead className="text-[#C7C7C7] font-medium text-sm">
               <tr>
                 <th className="px-4 py-3">Rank</th>
-                <th className="px-4 py-3 text-left">Wallet Address</th>
+                <th className="px-4 py-3">Wallet Address</th>
                 <th className="px-4 py-3 hidden md:table-cell">
                   Trading Volume
                 </th>
@@ -614,7 +619,7 @@ export default function TradingLeaderboard() {
             <tbody>
               {paginatedData.map((row, index) => (
                 <tr key={index} className="border-t border-[#1E1E1E]">
-                  <td className="px-4 py-3 font-semibold ">
+                  <td className="px-4 py-3 font-semibold">
                     {typeof row.rank === "string" &&
                     row.rank.startsWith("/images") ? (
                       <Image
@@ -622,13 +627,13 @@ export default function TradingLeaderboard() {
                         alt={`Rank ${index + 1}`}
                         width={28}
                         height={28}
-                        className="object-contain mx-auto"
+                        className="object-contain"
                       />
                     ) : (
                       row.rank
                     )}
                   </td>
-                  <td className="px-4 py-3 text-gray-300 text-left">
+                  <td className="px-4 py-3 text-gray-300">
                     {hideWallet(row.wallet)}
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
