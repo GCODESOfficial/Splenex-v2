@@ -56,14 +56,45 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
       throw new Error("Missing required parameters: fromChain, toChain, fromToken, toToken, fromAmount, fromAddress")
     }
 
-    const fromAmountNum = Number.parseFloat(request.fromAmount)
-    if (isNaN(fromAmountNum) || fromAmountNum <= 0) {
-      console.error(`[v0] Server: Invalid amount: ${request.fromAmount} (parsed: ${fromAmountNum})`);
-      throw new Error("Invalid amount: must be a valid number greater than 0")
+    // ✅ CRITICAL FIX: Ensure fromAmount is a valid BigNumberish (integer string)
+    // LiFi requires fromAmount to pass "isBigNumberish" validation - must be a proper integer string
+    let normalizedFromAmount = request.fromAmount.trim();
+    
+    // Remove any scientific notation or decimal points
+    if (normalizedFromAmount.includes('e') || normalizedFromAmount.includes('E')) {
+      // Convert scientific notation to integer
+      const numAmount = Number.parseFloat(normalizedFromAmount);
+      if (!isNaN(numAmount)) {
+        normalizedFromAmount = BigInt(Math.floor(numAmount)).toString();
+      }
+    } else if (normalizedFromAmount.includes('.')) {
+      // Remove decimal point and convert to integer
+      normalizedFromAmount = normalizedFromAmount.split('.')[0];
+    }
+    
+    // Validate it's a valid integer string (BigNumberish format)
+    const isBigNumberish = /^[0-9]+$/.test(normalizedFromAmount);
+    if (!isBigNumberish || normalizedFromAmount === '0') {
+      console.error(`[v0] Server: Invalid amount format: ${request.fromAmount} (normalized: ${normalizedFromAmount})`);
+      throw new Error(`Invalid amount format - must be a valid integer string (BigNumberish). Got: ${request.fromAmount}`)
+    }
+    
+    // Validate amount is greater than 0
+    if (BigInt(normalizedFromAmount) <= 0n) {
+      console.error(`[v0] Server: Invalid amount: ${normalizedFromAmount} must be greater than 0`);
+      throw new Error("Invalid amount: must be greater than 0")
     }
 
-    // Validate token addresses (should be valid Ethereum addresses)
-    const isValidAddress = (addr: string) => /^0x[a-fA-F0-9]{40}$/.test(addr);
+    // Validate token addresses (should be valid Ethereum addresses or native token placeholder)
+    const isValidAddress = (addr: string) => {
+      // Allow native token placeholders
+      if (addr === "0x0000000000000000000000000000000000000000" || 
+          addr === "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee") {
+        return true;
+      }
+      return /^0x[a-fA-F0-9]{40}$/.test(addr);
+    };
+    
     if (!isValidAddress(request.fromToken)) {
       console.error(`[v0] Server: Invalid fromToken address: ${request.fromToken}`);
       throw new Error(`Invalid fromToken address: ${request.fromToken}`)
@@ -82,13 +113,24 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
     const slippageDecimal = request.slippage ? (request.slippage / 100).toString() : "0.005";
     console.log("[v0] Server: Slippage sent to LiFi:", slippageDecimal);
 
+    // ✅ Normalize native token addresses for LiFi (LiFi uses 0xeeee... for native tokens)
+    const normalizeTokenAddress = (address: string): string => {
+      if (address === "0x0000000000000000000000000000000000000000") {
+        return "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+      }
+      return address;
+    };
+
+    const normalizedFromToken = normalizeTokenAddress(request.fromToken);
+    const normalizedToToken = normalizeTokenAddress(request.toToken);
+
     // Build params - ENABLE ALL EXCHANGES AND BRIDGES for maximum routing options!
     const params = new URLSearchParams({
       fromChain: request.fromChain.toString(),
       toChain: request.toChain.toString(),
-      fromToken: request.fromToken,
-      toToken: request.toToken,
-      fromAmount: request.fromAmount,
+      fromToken: normalizedFromToken,
+      toToken: normalizedToToken,
+      fromAmount: normalizedFromAmount, // Use normalized amount (BigNumberish format)
       fromAddress: request.fromAddress,
       ...(request.toAddress && { toAddress: request.toAddress }),
       slippage: slippageDecimal,
@@ -101,7 +143,7 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
       ...(request.denyExchanges && { denyExchanges: request.denyExchanges.join(",") }),
       ...(request.preferExchanges && { preferExchanges: request.preferExchanges.join(",") }),
       integrator: "SPLENEX",
-      fee: "0.02", // 2% fee collection for Splenex
+      fee: "0.005", // 0.5% fee collection for Splenex
       allowSwitchChain: "true",
       maxPriceImpact: "0.5", // Allow up to 50% price impact for illiquid pairs
     })
@@ -109,15 +151,15 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
     console.log("[v0] Server: Final LiFi API parameters:");
     console.log(`[v0] Server: fromChain: ${request.fromChain}`);
     console.log(`[v0] Server: toChain: ${request.toChain}`);
-    console.log(`[v0] Server: fromToken: ${request.fromToken}`);
-    console.log(`[v0] Server: toToken: ${request.toToken}`);
-    console.log(`[v0] Server: fromAmount: ${request.fromAmount}`);
+    console.log(`[v0] Server: fromToken: ${request.fromToken} → ${normalizedFromToken} (normalized)`);
+    console.log(`[v0] Server: toToken: ${request.toToken} → ${normalizedToToken} (normalized)`);
+    console.log(`[v0] Server: fromAmount: ${request.fromAmount} → ${normalizedFromAmount} (normalized to BigNumberish)`);
     console.log(`[v0] Server: fromAddress: ${request.fromAddress}`);
     console.log(`[v0] Server: toAddress: ${request.toAddress || 'not provided'}`);
     console.log(`[v0] Server: slippage: ${slippageDecimal}`);
     console.log(`[v0] Server: order: ${request.order || 'not provided'}`);
     console.log(`[v0] Server: integrator: SPLENEX`);
-    console.log(`[v0] Server: fee: 2% (0.02) - monetization enabled`);
+    console.log(`[v0] Server: fee: 0.5% (0.005) - monetization enabled`);
     
     console.log("[v0] Server: ⚡ Using ALL available AMMs and bridges for routing")
     
@@ -146,13 +188,22 @@ export async function getLiFiQuote(request: LiFiQuoteRequest) {
       console.error(`[v0] Server: Request URL was: ${LIFI_API_BASE}/quote?${params.toString()}`);
       
       if (response.status === 400) {
-        const errorMsg = errorData.message || errorData.error || "Invalid request parameters";
-        console.error(`[v0] Server: LiFi 400 error details:`, errorData);
-        throw new Error(`Invalid request parameters - check token addresses and amounts. LiFi error: ${errorMsg}`)
+        const errorMsg = errorData.message || errorData.error || errorData.errors?.[0]?.message || "Invalid request parameters";
+        const errorDetails = JSON.stringify(errorData, null, 2);
+        console.error(`[v0] Server: LiFi 400 error details:`, errorDetails);
+        
+        // Check for specific error types
+        if (errorMsg.includes("deny list") || errorMsg.includes("invalid") || errorMsg.includes("not supported")) {
+          return { success: false }
+        } else if (errorMsg.includes("BigNumberish") || errorMsg.includes("fromAmount")) {
+          throw new Error(`Invalid amount format: ${errorMsg}. The amount must be a valid integer string in wei format.`)
+        } else {
+          throw new Error(`Invalid request parameters - check token addresses and amounts. LiFi error: ${errorMsg}`)
+        }
       } else if (response.status === 404) {
         throw new Error("No routes available for this swap - try a different amount or token pair")
       } else {
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
+        throw new Error(errorData.message || errorData.error || `HTTP error! status: ${response.status}`)
       }
     }
 

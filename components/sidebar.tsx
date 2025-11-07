@@ -21,13 +21,13 @@ const menuItems: MenuItem[] = [
     icon: "/images/icons/leaderboard.svg",
   },
   { name: "LP Market", href: "/lp-market", icon: "/images/icons/lpmarket.svg" },
-  { name: "sPort", href: "/sport", icon: "/images/icons/sport.svg" },
-  { name: "sFund DAO", href: "/sfund-dao", icon: "/images/icons/sfund.svg" },
-  { name: "sHold", href: "/shold", icon: "/images/icons/hold.svg" },
-  { name: "On-Off Ramp", href: "/ramp", icon: "/images/icons/ramp.svg" },
-  { name: "sEdu", href: "/sedu", icon: "/images/icons/edu.svg" },
-  { name: "sCircler", href: "/scircler", icon: "/images/icons/circler.svg" },
-  { name: "sNFT", href: "/snft", icon: "/images/icons/nft.svg" },
+  { name: "sAI", href: "/sAI", icon: "/images/icons/sport.svg" },
+  // { name: "sFund DAO", href: "/sfund-dao", icon: "/images/icons/sfund.svg" },
+  // { name: "sHold", href: "/shold", icon: "/images/icons/hold.svg" },
+  // { name: "On-Off Ramp", href: "/ramp", icon: "/images/icons/ramp.svg" },
+  // { name: "sEdu", href: "/sedu", icon: "/images/icons/edu.svg" },
+  // { name: "sCircler", href: "/scircler", icon: "/images/icons/circler.svg" },
+  // { name: "sNFT", href: "/snft", icon: "/images/icons/nft.svg" },
 ];
 
 export default function Sidebar({
@@ -54,7 +54,7 @@ export default function Sidebar({
   return (
     <>
       <div
-        className={`bg-gradient-to-r from-[#0B0B0C] to-[#131313] text-white hidden md:flex flex-col pb-16 z-50 ${
+        className={`bg-gradient-to-r from-[#0B0B0C] to-[#131313] text-white hidden md:flex flex-col pb-16 z-50 h-full ${
           collapsed ? "w-20 " : "w-52 "
         } transition-all duration-300`}
       >
@@ -79,7 +79,7 @@ export default function Sidebar({
 
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center gap-3 ml-4  mt-4 pl-4 py-3 border-t-[#B79B08] border-t"
+          className="flex items-center gap-3 ml-4  mt-4 pl-4 py-3 border-t-[#B79B08] border-t border-b-[#B79B08] border-b"
         >
           {collapsed ? (
             <span className="text-[#FCD404]">▶</span>
@@ -103,7 +103,7 @@ export default function Sidebar({
                 className={`flex items-center px-4 py-5 relative transition-colors ml-4  ${
                   isActive
                     ? "text-black bg-yellow-400"
-                    : "text-[#C7C7C7] border-t-[#B79B08] border-t"
+                    : "text-[#C7C7C7] border-b-[#B79B08] border-b"
                 }`}
               >
                 {/* Active indicator triangle */}
@@ -165,7 +165,7 @@ export default function Sidebar({
                 key={item.name}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center px-5 py-4 transition-colors border-t-[#B79B08] border-t ${
+                className={`flex items-center px-5 py-4 transition-colors border-b-[#B79B08] border-b ${
                   isActive ? "bg-yellow-400 text-black" : "text-[#C7C7C7]"
                 }`}
               >

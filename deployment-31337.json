@@ -1,9 +1,0 @@
-{
-  "address": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-  "chainId": 31337,
-  "network": "hardhat",
-  "revenueWallet": "0xD9BD71AA48872430c54730a2D412918aB01cB1cC",
-  "taxRateBps": 500,
-  "deployedAt": "2025-10-23T16:34:38.766Z",
-  "transactionHash": "0xb723e38c0b228aa8e27e3c9f05e61ec508e17a2c1c9a0c69e9c72b0991540bee"
-}

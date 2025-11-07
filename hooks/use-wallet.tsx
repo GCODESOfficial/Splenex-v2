@@ -1278,4 +1278,3 @@ declare global {
     solflare?: any
   }
 }
-

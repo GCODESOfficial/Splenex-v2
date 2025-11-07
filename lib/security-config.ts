@@ -18,8 +18,12 @@ export const SECURITY_CONFIG = {
   
   // Wallet Security
   WALLET: {
-    MAX_APPROVAL_AMOUNT: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+    // Use calculated approvals instead of max to avoid MetaMask security warnings
+    // Max approval pattern is commonly used by scams
+    APPROVAL_MULTIPLIER: 1.5, // Approve 1.5x the required amount as buffer
     MIN_TRANSACTION_DELAY_MS: 1000, // Prevent rapid-fire txs
+    // DEPRECATED: Do not use MAX_APPROVAL_AMOUNT - triggers MetaMask security warnings
+    // MAX_APPROVAL_AMOUNT: '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
   },
   
   // Swap Security

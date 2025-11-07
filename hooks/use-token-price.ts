@@ -64,4 +64,3 @@ export function useTokenPrice(symbol: string, amount: string) {
   return { usdValue, tokenPrice, isLoading };
 }
 
-

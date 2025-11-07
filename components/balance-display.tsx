@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react"
 import { useWallet } from "@/hooks/use-wallet"
-import { TrendingUp, RefreshCw, X, Loader2 } from "lucide-react"
+import { TrendingUp, RefreshCw, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -142,16 +142,8 @@ export function BalanceDisplay() {
       <Dialog open={isPortfolioModalOpen} onOpenChange={setIsPortfolioModalOpen}>
         <DialogContent className="bg-[#121212] border border-[#FCD404] text-white rounded-none max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-yellow-400 flex justify-between items-center">
+            <DialogTitle className="text-lg font-semibold text-yellow-400">
               Multi-Chain Portfolio
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsPortfolioModalOpen(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </DialogTitle>
           </DialogHeader>
 

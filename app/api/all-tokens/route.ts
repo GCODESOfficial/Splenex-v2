@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchAllTokens } from "@/lib/reliable-token-service";
 
 /**
- * Comprehensive Token API - All CoinGecko Tokens on All Chains
- * Fetches ALL tokens from CoinGecko and maps them to ALL supported chains
+ * Comprehensive Token API - All Tokens from Reliable Multi-Source Service
+ * Replaces CoinGecko with Token Lists, 1inch, Uniswap, ParaSwap, and LiFi
+ * Much more reliable and faster than CoinGecko!
  */
 
 // Comprehensive chain mapping - Enhanced for maximum token coverage
@@ -280,23 +282,51 @@ export async function GET(request: NextRequest) {
 
 async function refreshTokenCache() {
   try {
-    console.log("[All Tokens API] 🚀 Fetching comprehensive token list from multiple sources...");
+    console.log("[All Tokens API] 🚀 Fetching comprehensive token list from reliable multi-source service...");
     
-    const allTokens: TokenWithChains[] = [];
+    // Use reliable token service (replaces CoinGecko)
+    const tokens = await fetchAllTokens();
     
-    // Strategy 1: Fetch from CoinGecko (comprehensive but rate-limited)
-    await fetchFromCoinGecko(allTokens);
+    // Convert to TokenWithChains format
+    const tokensBySymbol = new Map<string, TokenWithChains>();
     
-    // Strategy 2: Add popular tokens from CoinGecko (authoritative source)
-    await addPopularTokensFromCoinGecko(allTokens);
+    tokens.forEach(token => {
+      const key = token.symbol.toUpperCase();
+      if (!tokensBySymbol.has(key)) {
+        tokensBySymbol.set(key, {
+          id: token.address.toLowerCase(),
+          symbol: token.symbol,
+          name: token.name,
+          logoURI: token.logoURI || '',
+          chains: [{
+            chainId: token.chainId,
+            chainName: token.chainName,
+            address: token.address,
+            decimals: token.decimals,
+          }],
+          marketCapRank: token.marketCapRank,
+        });
+      } else {
+        // Add this chain to existing token
+        const existing = tokensBySymbol.get(key)!;
+        existing.chains.push({
+          chainId: token.chainId,
+          chainName: token.chainName,
+          address: token.address,
+          decimals: token.decimals,
+        });
+      }
+    });
     
-    // Strategy 3: Add fallback popular tokens (if CoinGecko fails)
+    const allTokens: TokenWithChains[] = Array.from(tokensBySymbol.values());
+    
+    // Add fallback popular tokens (if needed)
     await addPopularTokens(allTokens);
     
-    // Strategy 3: Add wrapped tokens for major chains
+    // Add wrapped tokens for major chains
     await addWrappedTokens(allTokens);
     
-    // Strategy 4: Add stablecoins across chains
+    // Add stablecoins across chains
     await addStablecoins(allTokens);
     
     // Remove duplicates and sort

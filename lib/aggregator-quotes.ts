@@ -1,12 +1,258 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-"use server"
 
 import { getCachedQuote, setCachedQuote } from "./quote-cache";
+import { getDEXScreenerToken } from "./dexscreener";
+import { getDirectDexQuote } from "./direct-dex-quote";
+import { getTokenDecimals } from "./token-decimals";
+import { fetchUniswapV2AmountsOut } from "./uniswap-v2";
+
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const LIFI_NATIVE_TOKEN = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+const PROOF_TOKEN_ADDRESS = "0x9b4a69de6ca0defdd02c0c4ce6cb84de5202944e";
+
+const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+const PROOF_LOG_PREFIX = "[PROOF Uniswap]";
+
+const isNativeTokenAddress = (address: string): boolean => {
+  return !address || address.toLowerCase() === ZERO_ADDRESS;
+};
+
+const normalizeTokenAddress = (address: string): string => {
+  if (!address) return ZERO_ADDRESS;
+  return address.toLowerCase();
+};
+
+const isProofTokenAddress = (address: string): boolean => {
+  return normalizeTokenAddress(address) === PROOF_TOKEN_ADDRESS;
+};
+
+const isProofEthPair = (request: QuoteRequest): boolean => {
+  const fromAddr = normalizeTokenAddress(request.fromToken);
+  const toAddr = normalizeTokenAddress(request.toToken);
+
+  const involvesProof = isProofTokenAddress(fromAddr) || isProofTokenAddress(toAddr);
+  const involvesEth = isNativeTokenAddress(fromAddr) || isNativeTokenAddress(toAddr) || fromAddr === WETH_ADDRESS.toLowerCase() || toAddr === WETH_ADDRESS.toLowerCase();
+
+  return involvesProof && involvesEth && request.fromChain === 1 && request.toChain === 1;
+};
+
+const normalizeForDirectDex = (address: string): string => {
+  return isNativeTokenAddress(address) ? LIFI_NATIVE_TOKEN : address;
+};
+
+function parseDecimalToBigInt(value: string, scale = 18): bigint {
+  if (!value) return 0n;
+  const [intPart, fracPart = ""] = value.split(".");
+  const frac = fracPart.slice(0, scale);
+  const paddedFrac = frac.padEnd(scale, "0");
+  const digits = `${intPart}${paddedFrac}`.replace(/^[-+]?0+(?=\d)/, (m) => (m.includes("-") ? "-" : "") + "");
+  return BigInt(digits || "0");
+}
+
+async function fetchDexscreenerAmount(
+  path: string[],
+  fromAmountWei: bigint
+): Promise<{
+  amount: bigint;
+  pairUrl?: string;
+  tokenInDecimals: number;
+  tokenOutDecimals: number;
+} | null> {
+  try {
+    const pairs = await getDEXScreenerToken(PROOF_TOKEN_ADDRESS);
+    if (!pairs.length) return null;
+
+    const wethAddress = WETH_ADDRESS.toLowerCase();
+    const proofAddress = PROOF_TOKEN_ADDRESS;
+    const targetPair = pairs.find((pair: any) => {
+      const base = pair.baseToken?.address?.toLowerCase();
+      const quote = pair.quoteToken?.address?.toLowerCase();
+      return (
+        (base === proofAddress && quote === wethAddress) ||
+        (base === wethAddress && quote === proofAddress)
+      );
+    });
+
+    if (!targetPair || !targetPair.priceNative) {
+      console.warn(`${PROOF_LOG_PREFIX} ⚠️ Dexscreener pair not found for PROOF/WETH`);
+      return null;
+    }
+
+    const priceScale = 18n;
+    const priceScaled = parseDecimalToBigInt(targetPair.priceNative, Number(priceScale));
+    if (priceScaled <= 0n) {
+      console.warn(`${PROOF_LOG_PREFIX} ⚠️ Dexscreener price invalid`);
+      return null;
+    }
+
+    const pathLower = path.map((addr) => addr.toLowerCase());
+    const isEthToProof = pathLower[0] === wethAddress && pathLower[pathLower.length - 1] === proofAddress;
+    const isProofToEth = pathLower[0] === proofAddress && pathLower[pathLower.length - 1] === wethAddress;
+
+    if (!isEthToProof && !isProofToEth) {
+      return null;
+    }
+
+    const tokenInAddress = pathLower[0];
+    const tokenOutAddress = pathLower[pathLower.length - 1];
+    const tokenInDecimals = await getTokenDecimals(tokenInAddress);
+    const tokenOutDecimals = await getTokenDecimals(tokenOutAddress);
+    const tokenInScale = 10n ** BigInt(tokenInDecimals);
+    const tokenOutScale = 10n ** BigInt(tokenOutDecimals);
+    const priceScaleFactor = 10n ** priceScale;
+
+    let amountOut: bigint;
+    if (isEthToProof) {
+      // Convert WETH (18 decimals) to PROOF with tokenOutDecimals
+      const numerator = fromAmountWei * tokenOutScale * priceScaleFactor;
+      const denominator = priceScaled * tokenInScale;
+      amountOut = denominator === 0n ? 0n : numerator / denominator;
+    } else {
+      // PROOF → ETH
+      const numerator = fromAmountWei * priceScaled * tokenOutScale;
+      const denominator = tokenInScale * priceScaleFactor;
+      amountOut = denominator === 0n ? 0n : numerator / denominator;
+    }
+
+    return {
+      amount: amountOut,
+      pairUrl: targetPair.url,
+      tokenInDecimals,
+      tokenOutDecimals,
+    };
+  } catch (error) {
+    console.error(`${PROOF_LOG_PREFIX} ❌ Dexscreener fallback error`, error);
+    return null;
+  }
+}
+
+async function getProofUniswapRoute(request: QuoteRequest): Promise<UnifiedQuote | null> {
+  if (!isProofEthPair(request)) {
+    return null;
+  }
+
+  try {
+    console.log(`${PROOF_LOG_PREFIX} 🚀 Routing via Uniswap for PROOF ↔ ETH pair`);
+
+    const directRequest = {
+      fromChain: request.fromChain,
+      toChain: request.toChain,
+      fromToken: normalizeForDirectDex(request.fromToken),
+      toToken: normalizeForDirectDex(request.toToken),
+      fromAmount: request.fromAmount,
+      fromAddress: request.fromAddress,
+      slippage: request.slippage ?? 0.5,
+    };
+
+    const directResult = await getDirectDexQuote(directRequest as any);
+
+    if (!directResult.success || !directResult.data) {
+      console.warn(`${PROOF_LOG_PREFIX} ⚠️ Uniswap direct quote failed`, directResult.error);
+      return null;
+    }
+
+    const quote = directResult.data;
+    const baseTx: any = quote.transactionRequest || {};
+    const txGasLimit = baseTx.gasLimit || "250000";
+
+    const path = quote.path || [];
+    let rawOutput: bigint | null = null;
+    let fallbackSource: "uniswap" | "dexscreener" | "fallback" = "dexscreener";
+    let dexscreenerPairUrl: string | undefined;
+
+    let tokenInDecimals = await getTokenDecimals(path[0] ?? request.fromToken);
+    let tokenOutDecimals = await getTokenDecimals(path[path.length - 1] ?? request.toToken);
+
+    const uniswapAmounts = await fetchUniswapV2AmountsOut(request.fromAmount, path, PROOF_LOG_PREFIX);
+    if (uniswapAmounts && uniswapAmounts.length) {
+      rawOutput = uniswapAmounts[uniswapAmounts.length - 1];
+      fallbackSource = "uniswap";
+      console.log(
+        `${PROOF_LOG_PREFIX} 📈 On-chain amounts:`,
+        uniswapAmounts.map((amount, idx) => ({
+          index: idx,
+          value: amount.toString(),
+        }))
+      );
+      console.log(
+        `${PROOF_LOG_PREFIX} 📊 Raw output (wei): ${rawOutput.toString()}`
+      );
+      console.log(`${PROOF_LOG_PREFIX} 💧 Using on-chain Uniswap getAmountsOut`);
+    }
+
+    const dexFallback = await fetchDexscreenerAmount(path, BigInt(request.fromAmount));
+    if (dexFallback && dexFallback.amount > 0n) {
+      if (!rawOutput) {
+        rawOutput = dexFallback.amount;
+        fallbackSource = "dexscreener";
+        console.log(`${PROOF_LOG_PREFIX} 💹 Using Dexscreener output for PROOF quote`);
+      }
+      dexscreenerPairUrl = dexFallback.pairUrl;
+      tokenInDecimals = dexFallback.tokenInDecimals;
+      tokenOutDecimals = dexFallback.tokenOutDecimals;
+    }
+
+    if (!rawOutput) {
+      rawOutput = BigInt(quote.toAmount || request.fromAmount);
+      fallbackSource = "fallback";
+      console.warn(`${PROOF_LOG_PREFIX} ⚠️ Dexscreener data unavailable, falling back to cached quote amount`);
+    }
+
+    const baseSlippagePercent = request.slippage ?? 0.5;
+    const effectiveSlippagePercent =
+      fallbackSource === "dexscreener"
+        ? Math.max(baseSlippagePercent, 20)
+        : fallbackSource === "uniswap"
+          ? Math.max(baseSlippagePercent, 20)
+          : baseSlippagePercent;
+    const slippageBps = BigInt(Math.round(effectiveSlippagePercent * 100));
+    const denominator = 10000n;
+    const numerator = slippageBps >= denominator ? 0n : denominator - slippageBps;
+    const minOut = rawOutput * numerator / denominator;
+
+    const amountsOutForRoute =
+      uniswapAmounts && uniswapAmounts.length
+        ? uniswapAmounts.map((amount) => amount.toString())
+        : [request.fromAmount, rawOutput.toString()];
+
+    console.log(`${PROOF_LOG_PREFIX} ✅ Uniswap route prepared via ${quote.provider}`);
+
+    return {
+      provider: "uniswap",
+      toAmount: rawOutput.toString(),
+      toAmountMin: minOut.toString(),
+      estimatedGas: txGasLimit,
+      transactionRequest: {
+        ...quote.transactionRequest,
+        gasLimit: txGasLimit,
+      },
+      route: {
+        protocol: "uniswap-v2",
+        path: quote.path,
+        proofPair: true,
+        amountsOut: amountsOutForRoute,
+        fallbackSource,
+        slippagePercentApplied: effectiveSlippagePercent,
+        dexscreenerPairUrl,
+      },
+      liquidityScore: 90,
+      priceImpact: 3,
+      tokenInDecimals,
+      tokenOutDecimals,
+      fromAmount: request.fromAmount,
+      fromTokenAddress: request.fromToken,
+      toTokenAddress: request.toToken,
+    };
+  } catch (error) {
+    console.error(`${PROOF_LOG_PREFIX} ❌ Failed to build Uniswap route`, error);
+    return null;
+  }
+}
 
 /**
  * Multi-Aggregator Quote System
  * Tries multiple DEX aggregators to ensure maximum token coverage
- * Order: LiFi → 1inch → 0x → Paraswap → PancakeSwap
+ * Order: LiFi first (primary), then fallback to other aggregators (1inch, 0x, Paraswap, etc.)
  * Now with 30-second caching for faster repeated requests!
  */
 
@@ -31,6 +277,11 @@ interface UnifiedQuote {
   estimate?: any
   liquidityScore?: number // Higher = better liquidity
   priceImpact?: number // Lower = better
+  fromAmount?: string
+  tokenInDecimals?: number
+  tokenOutDecimals?: number
+  fromTokenAddress?: string
+  toTokenAddress?: string
 }
 
 const LIFI_API_KEY = process.env.LIFI_API_KEY
@@ -120,6 +371,27 @@ async function getLiFiQuote(request: QuoteRequest): Promise<UnifiedQuote | null>
     console.log(`[Aggregator] Token normalization: ${request.fromToken} → ${normalizedFromToken}`);
     console.log(`[Aggregator] Token normalization: ${request.toToken} → ${normalizedToToken}`);
     
+    // ✅ CRITICAL FIX: Ensure fromAmount is a valid BigNumberish (integer string)
+    let normalizedFromAmount = request.fromAmount.trim();
+    
+    // Remove any scientific notation or decimal points
+    if (normalizedFromAmount.includes('e') || normalizedFromAmount.includes('E')) {
+      const numAmount = Number.parseFloat(normalizedFromAmount);
+      if (!isNaN(numAmount)) {
+        normalizedFromAmount = BigInt(Math.floor(numAmount)).toString();
+      }
+    } else if (normalizedFromAmount.includes('.')) {
+      normalizedFromAmount = normalizedFromAmount.split('.')[0];
+    }
+    
+    // Validate it's a valid integer string (BigNumberish format)
+    if (!/^[0-9]+$/.test(normalizedFromAmount) || normalizedFromAmount === '0') {
+      console.error(`[Aggregator] Invalid amount format: ${request.fromAmount}`);
+      return null;
+    }
+    
+    console.log(`[Aggregator] Amount normalization: ${request.fromAmount} → ${normalizedFromAmount}`);
+    
     const slippageDecimal = request.slippage ? (request.slippage / 100).toString() : "0.005";
     
     const params = new URLSearchParams({
@@ -127,12 +399,12 @@ async function getLiFiQuote(request: QuoteRequest): Promise<UnifiedQuote | null>
       toChain: request.toChain.toString(),
       fromToken: normalizedFromToken,
       toToken: normalizedToToken,
-      fromAmount: request.fromAmount,
+      fromAmount: normalizedFromAmount, // Use normalized amount
       fromAddress: request.fromAddress,
       ...(request.toAddress && { toAddress: request.toAddress }),
       slippage: slippageDecimal,
       integrator: "SPLENEX",
-      fee: "0.02", // 2% fee
+      fee: "0.005", // 0.5% fee
       allowSwitchChain: "true",
       maxPriceImpact: "0.5",
     });
@@ -147,7 +419,18 @@ async function getLiFiQuote(request: QuoteRequest): Promise<UnifiedQuote | null>
     });
 
     if (!response.ok) {
-      console.log(`[Aggregator] LiFi failed: ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      const errorMsg = errorData.message || errorData.error || errorData.errors?.[0]?.message || `Status ${response.status}`;
+      
+      // Log specific errors for debugging
+      if (response.status === 400) {
+        console.log(`[Aggregator] LiFi 400 error: ${errorMsg}`);
+        if (errorMsg.includes("deny list") || errorMsg.includes("invalid") || errorMsg.includes("not supported")) {
+          console.log(`[Aggregator] ⚠️ Token not supported by LiFi - will try other aggregators`);
+        }
+      } else {
+        console.log(`[Aggregator] LiFi failed: ${response.status} - ${errorMsg}`);
+      }
       return null;
     }
 
@@ -751,6 +1034,15 @@ function calculateLiquidityScore(routeData: any): number {
   return Math.max(0, Math.min(100, score));
 }
 
+async function resolveQuoteDecimals(fromToken: string, toToken: string) {
+  const [tokenInDecimals, tokenOutDecimals] = await Promise.all([
+    getTokenDecimals(fromToken),
+    getTokenDecimals(toToken),
+  ]);
+
+  return { tokenInDecimals, tokenOutDecimals };
+}
+
 /**
  * Try PancakeSwap (excellent for BSC and multi-chain)
  */
@@ -833,6 +1125,145 @@ async function getPancakeSwapQuote(request: QuoteRequest): Promise<UnifiedQuote 
   }
 }
 
+export async function getParallelRoutes(request: QuoteRequest) {
+  console.log("[Parallel Routes] 🚀 Starting PARALLEL route search...");
+  console.log(`[Parallel Routes] From: ${request.fromToken} (chain ${request.fromChain})`);
+  console.log(`[Parallel Routes] To: ${request.toToken} (chain ${request.toChain})`);
+  console.log(`[Parallel Routes] Amount: ${request.fromAmount}`);
+
+  let cachedDecimals: { tokenInDecimals: number; tokenOutDecimals: number } | null = null;
+  const getDecimals = async () => {
+    if (!cachedDecimals) {
+      cachedDecimals = await resolveQuoteDecimals(request.fromToken, request.toToken);
+    }
+    return cachedDecimals;
+  };
+
+  const enrichQuote = async (quote: UnifiedQuote | null) => {
+    if (!quote) return quote;
+    const decimals = await getDecimals();
+    quote.fromAmount = quote.fromAmount ?? request.fromAmount;
+    quote.tokenInDecimals = quote.tokenInDecimals ?? decimals.tokenInDecimals;
+    quote.tokenOutDecimals = quote.tokenOutDecimals ?? decimals.tokenOutDecimals;
+    quote.fromTokenAddress = quote.fromTokenAddress ?? request.fromToken;
+    quote.toTokenAddress = quote.toTokenAddress ?? request.toToken;
+    return quote;
+  };
+
+  const cachedQuote = getCachedQuote(request);
+  if (cachedQuote) {
+    console.log("[Parallel Routes] ⚡ Returning cached quote (cache hit)");
+    await enrichQuote(cachedQuote);
+    return {
+      success: true,
+      data: cachedQuote,
+      bestRoute: cachedQuote,
+      allQuotes: [cachedQuote],
+      provider: cachedQuote.provider,
+      totalProviders: 1,
+      failedProviders: [],
+    };
+  }
+
+  if (isProofEthPair(request)) {
+    const proofRoute = await getProofUniswapRoute(request);
+    if (proofRoute) {
+      await enrichQuote(proofRoute);
+      setCachedQuote(request, proofRoute);
+      return {
+        success: true,
+        data: proofRoute,
+        bestRoute: proofRoute,
+        allQuotes: [proofRoute],
+        provider: proofRoute.provider,
+        totalProviders: 1,
+        failedProviders: [],
+      };
+    }
+  }
+
+  const aggregatorEntries = [
+    { name: "lifi", fn: getLiFiQuote },
+    { name: "1inch", fn: get1inchQuote },
+    { name: "0x", fn: get0xQuote },
+    { name: "paraswap", fn: getParaswapQuote },
+    { name: "pancakeswap", fn: getPancakeSwapQuote },
+    { name: "uniswap", fn: getUniswapQuote },
+    { name: "sushiswap", fn: getSushiSwapQuote },
+    { name: "kyberswap", fn: getKyberSwapQuote },
+    { name: "openocean", fn: getOpenOceanQuote },
+  ];
+
+  const quotePromises = aggregatorEntries.map(async ({ fn }) => {
+    try {
+      return await fn(request);
+    } catch (error) {
+      console.warn("[Parallel Routes] Aggregator failed", error);
+      return null;
+    }
+  });
+
+  const settled = await Promise.allSettled(quotePromises);
+
+  const successfulQuotes: Array<UnifiedQuote & { providerName?: string }> = [];
+  const failedProviders: string[] = [];
+
+  settled.forEach((result, index) => {
+    const providerName = aggregatorEntries[index].name;
+    if (result.status === "fulfilled" && result.value) {
+      successfulQuotes.push({ ...result.value, providerName });
+    } else {
+      failedProviders.push(providerName);
+    }
+  });
+
+  if (!successfulQuotes.length) {
+    console.log("[Parallel Routes] ❌ No successful routes");
+    return {
+      success: false,
+      error: "No routes available",
+      attemptedProviders: aggregatorEntries.map(({ name }) => name),
+      failedProviders,
+    };
+  }
+
+  await Promise.all(successfulQuotes.map((quote) => enrichQuote(quote)));
+
+  successfulQuotes.sort((a, b) => {
+    const amountA = BigInt(a.toAmount || "0");
+    const amountB = BigInt(b.toAmount || "0");
+    if (amountA !== amountB) {
+      return amountA > amountB ? -1 : 1;
+    }
+
+    const liquidityA = a.liquidityScore ?? 0;
+    const liquidityB = b.liquidityScore ?? 0;
+    if (liquidityA !== liquidityB) {
+      return liquidityB - liquidityA;
+    }
+
+    const impactA = a.priceImpact ?? 0;
+    const impactB = b.priceImpact ?? 0;
+    return impactA - impactB;
+  });
+
+  const bestQuote = successfulQuotes[0];
+  await enrichQuote(bestQuote);
+  setCachedQuote(request, bestQuote);
+
+  console.log(`[Parallel Routes] ✅ Best route from ${bestQuote.provider.toUpperCase()}`);
+
+  return {
+    success: true,
+    data: bestQuote,
+    bestRoute: bestQuote,
+    allQuotes: successfulQuotes,
+    provider: bestQuote.provider,
+    totalProviders: successfulQuotes.length,
+    failedProviders,
+  };
+}
+
 /**
  * Main function: Try all aggregators and return the best quote
  */
@@ -842,10 +1273,30 @@ export async function getMultiAggregatorQuote(request: QuoteRequest) {
   console.log(`[Aggregator] To: ${request.toToken} (chain ${request.toChain})`);
   console.log(`[Aggregator] Amount: ${request.fromAmount}`);
   
+  let cachedDecimals: { tokenInDecimals: number; tokenOutDecimals: number } | null = null;
+  const getDecimals = async () => {
+    if (!cachedDecimals) {
+      cachedDecimals = await resolveQuoteDecimals(request.fromToken, request.toToken);
+    }
+    return cachedDecimals;
+  };
+
+  const enrichQuote = async (quote: UnifiedQuote | null) => {
+    if (!quote) return quote;
+    const decimals = await getDecimals();
+    quote.fromAmount = quote.fromAmount ?? request.fromAmount;
+    quote.tokenInDecimals = quote.tokenInDecimals ?? decimals.tokenInDecimals;
+    quote.tokenOutDecimals = quote.tokenOutDecimals ?? decimals.tokenOutDecimals;
+    quote.fromTokenAddress = quote.fromTokenAddress ?? request.fromToken;
+    quote.toTokenAddress = quote.toTokenAddress ?? request.toToken;
+    return quote;
+  };
+  
   // Check cache first for instant response
   const cachedQuote = getCachedQuote(request);
   if (cachedQuote) {
     console.log("[Aggregator] ⚡ Returning cached quote (instant!)");
+    await enrichQuote(cachedQuote);
     return {
       success: true,
       data: cachedQuote,
@@ -853,12 +1304,26 @@ export async function getMultiAggregatorQuote(request: QuoteRequest) {
     };
   }
   
+  // Dedicated routing for PROOF ↔ ETH swaps using Uniswap
+  if (isProofEthPair(request)) {
+    const proofRoute = await getProofUniswapRoute(request);
+    if (proofRoute) {
+      await enrichQuote(proofRoute);
+      setCachedQuote(request, proofRoute);
+      return {
+        success: true,
+        data: proofRoute,
+        provider: proofRoute.provider,
+      };
+    }
+  }
+
   const isCrossChain = request.fromChain !== request.toChain;
   
-  // Enhanced routing strategy: Try multiple aggregators for maximum coverage
+  // Enhanced routing strategy: Try LiFi first, then other aggregators as fallback
   const aggregators = isCrossChain 
     ? [
-        getLiFiQuote,           // Best for cross-chain
+        getLiFiQuote,           // Best for cross-chain - TRY FIRST
         getOpenOceanQuote,       // Good cross-chain alternative
         get1inchQuote,          // Fallback for same-chain portions
         get0xQuote,             // High liquidity
@@ -869,6 +1334,7 @@ export async function getMultiAggregatorQuote(request: QuoteRequest) {
         getUniswapQuote,         // Ethereum specialist
       ]
     : [
+        getLiFiQuote,           // TRY FIRST - primary aggregator
         get1inchQuote,          // Fastest for same-chain
         get0xQuote,             // High liquidity
         getKyberSwapQuote,       // Excellent for low-cap tokens
@@ -877,40 +1343,30 @@ export async function getMultiAggregatorQuote(request: QuoteRequest) {
         getPancakeSwapQuote,     // BSC specialist
         getParaswapQuote,        // Reliable backup
         getOpenOceanQuote,       // Good fallback
-        getLiFiQuote,           // Cross-chain fallback
       ];
   
-  // ✅ ULTRA-FAST: Try top 3 aggregators in parallel with race condition (takes fastest response)
-  console.log("[Aggregator] ⚡ Race mode: Trying top 3 aggregators in parallel...");
+  // ✅ Try LiFi first (primary aggregator) before trying others
+  console.log("[Aggregator] 🔵 Trying LiFi first...");
   
-  const topAggregators = aggregators.slice(0, 3);
-  const racePromises = topAggregators.map((aggregator, index) => 
-    Promise.race([
-      aggregator(request),
-      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000)) // 5s timeout per aggregator
-    ]).catch(err => {
-      console.log(`[Aggregator] ⚠️ Aggregator ${index + 1} timeout/failed`);
-      return null;
-    })
-  );
-
   try {
-    const results = await Promise.race(racePromises.map((p, i) => 
-      p.then(result => ({ result, index: i }))
-    ));
+    const lifiQuote = await Promise.race([
+      getLiFiQuote(request),
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 6000)) // 6s timeout for LiFi
+    ]);
     
-    if (results && results.result) {
-      console.log(`[Aggregator] ✅ Fast quote from aggregator ${results.index + 1} (<5s)`);
-      setCachedQuote(request, results.result);
+    if (lifiQuote) {
+      console.log(`[Aggregator] ✅ LiFi quote received!`);
+      await enrichQuote(lifiQuote);
+      setCachedQuote(request, lifiQuote);
       return {
         success: true,
-        data: results.result,
-        provider: results.result.provider,
-        totalProviders: 3,
+        data: lifiQuote,
+        provider: lifiQuote.provider,
+        totalProviders: 1,
       };
     }
   } catch (error) {
-    console.log(`[Aggregator] ⚠️ Race failed, trying all aggregators in parallel...`);
+    console.log(`[Aggregator] ⚠️ LiFi failed or timed out, trying other aggregators...`);
   }
 
   // Fallback: Try all aggregators in parallel
@@ -936,6 +1392,8 @@ export async function getMultiAggregatorQuote(request: QuoteRequest) {
       return null;
     })
     .filter((q): q is UnifiedQuote => q !== null);
+
+  await Promise.all(successfulQuotes.map((quote) => enrichQuote(quote)));
 
   if (successfulQuotes.length === 0) {
     console.log("[Aggregator] ❌ No aggregator could provide a quote");
@@ -971,6 +1429,7 @@ export async function getMultiAggregatorQuote(request: QuoteRequest) {
   const bestQuote = successfulQuotes[0];
   
   // Cache the best quote for faster future requests
+  await enrichQuote(bestQuote);
   setCachedQuote(request, bestQuote);
   
   console.log(`[Aggregator] ✅ Best quote from: ${bestQuote.provider.toUpperCase()}`);

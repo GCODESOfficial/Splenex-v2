@@ -37,11 +37,13 @@ export async function signLimitOrder(
     console.log("[LimitOrder] 🎯 Creating EIP-712 typed signature for order...");
 
     // EIP-712 domain
+    // Use a clear, identifiable domain name to help MetaMask recognize legitimate limit orders
     const domain = {
       name: "Splenex Limit Orders",
       version: "1",
       chainId: orderData.chainId,
-      verifyingContract: "0x0000000000000000000000000000000000000001", // Placeholder - would be actual contract
+      // Use zero address as this is an off-chain signature, not a contract interaction
+      verifyingContract: "0x0000000000000000000000000000000000000000",
     };
 
     // EIP-712 types
@@ -70,8 +72,11 @@ export async function signLimitOrder(
       salt: orderData.salt,
     };
 
-    console.log("[LimitOrder] 📝 Requesting EIP-712 signature...");
-    console.log("[LimitOrder] 💡 This authorizes the executor to perform swap when conditions are met");
+    console.log("[LimitOrder] 📝 Requesting EIP-712 signature for limit order...");
+    console.log("[LimitOrder] 🔒 This is a secure limit order signature");
+    console.log("[LimitOrder] 💰 Amount:", orderData.fromAmount);
+    console.log("[LimitOrder] 🎯 Target Rate:", orderData.targetRate);
+    console.log("[LimitOrder] ⏰ Expires:", new Date(orderData.expiryTimestamp * 1000).toISOString());
 
     // Sign using EIP-712
     const signature = await provider.request({

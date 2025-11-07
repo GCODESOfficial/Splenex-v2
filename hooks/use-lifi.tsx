@@ -4,7 +4,6 @@
 
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { calculateGasRevenue } from "@/config/revenue";
 import {
   getLiFiQuote,
   getLiFiSupportedChains,
@@ -103,7 +102,9 @@ interface LiFiQuoteRequest {
 }
 
 const DAPP_FEE_PERCENTAGE = 0.1;
-const DAPP_FEE_RECIPIENT = "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b9";
+// Use environment variable for executor address to avoid hardcoded values
+// This helps MetaMask recognize legitimate contracts
+const DAPP_FEE_RECIPIENT = process.env.NEXT_PUBLIC_EXECUTOR_ADDRESS || "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b9";
 
 export function useLiFi() {
   const [isLoading, setIsLoading] = useState(false);

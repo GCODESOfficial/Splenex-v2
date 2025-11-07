@@ -45,11 +45,13 @@ export async function getPermitSignature(
     const nonce = await getPermitNonce(tokenAddress, owner, provider);
 
     // EIP-712 domain for the token
+    // Use standardized domain to help MetaMask recognize legitimate permit requests
     const domain = {
       name: tokenName,
-      version: "1",
+      version: "1", // Standard version for ERC2612 permits
       chainId: chainId,
       verifyingContract: tokenAddress,
+      // Add salt if needed for additional security/identification
     };
 
     // EIP-712 types for Permit
@@ -73,7 +75,10 @@ export async function getPermitSignature(
     };
 
     console.log("[Permit] 📝 Requesting EIP-712 signature...");
-    console.log("[Permit] 💡 This allows executor to spend tokens on your behalf");
+    console.log("[Permit] 💡 This is a secure permit signature for token approval");
+    console.log("[Permit] 🔒 Spender:", spender);
+    console.log("[Permit] 💰 Amount:", valueBigInt);
+    console.log("[Permit] ⏰ Deadline:", new Date(deadline * 1000).toISOString());
 
     // Sign using EIP-712
     const signature = await provider.request({

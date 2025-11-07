@@ -125,7 +125,7 @@ export default function Page() {
   }, [totalVolume])
 
   return (
-    <div className="min-h-screen bg-black text-white px-4 md:px-8">
+    <div className="min-h-screen bg-black text-white px-4 md:px-8 pt-20">
       {/* Header */}
       <div className="">
         <div className=" mx-auto md:px-6 py-0">
@@ -163,7 +163,7 @@ export default function Page() {
       <div className="mx-auto px-0 md:px-6 py-8 md:space-y-8">
         
         {/* Metrics Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-1">
+        <div className="grid grid-cols-2 md:grid-cols-6 md:gap-1 gap-2 gap-y-6 md:gap-y-0">
           {/* SPX Token Price Card - Highlighted */}
           <div className="flex flex-col  justify-center p-4  min-h-[120px] bg-gradient-to-br from-[#FFD600] to-[#F3DA5F] text-black">
             <div className="flex items-center justify-start w-12 h-12 mb-3">
@@ -365,18 +365,19 @@ export default function Page() {
           </div>
 
           {/* Trading Volume Chart */}
-          <div className="bg-[#121212] border border-[#1E1E1E] p-6">
+          <div className="bg-[#121212] border border-[#1E1E1E] p-3 md:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white text-lg font-semibold">Trading Volume</h3>
+              <h3 className="text-white md:text-lg text-sm font-semibold hidden md:block">Trading Volume</h3>
+              <h3 className="text-white md:text-lg text-sm font-semibold md:hidden">Trad. Vol.</h3>
               
               {/* Timeframe buttons */}
-              <div className="flex gap-2">
+              <div className="flex md:gap-2 gap-1">
                 {["1D", "3D", "1W", "1M", "3M", "All Time"].map((timeframe) => (
                   <button
                     key={timeframe}
                     onClick={() => setActiveRange(timeframe)}
                     className={`
-                      px-3 py-1 rounded text-sm font-medium transition-colors
+                      px-3 py-1 rounded md:text-sm text-[10px] font-medium transition-colors
                       ${activeRange === timeframe
                         ? 'bg-[#FFD600] text-black'
                         : 'bg-[#1A1A1A] text-white hover:bg-[#2A2A2A]'
@@ -409,7 +410,17 @@ export default function Page() {
                 <LineChart data={filteredData}>
                   <XAxis dataKey="day" stroke="#888" />
                   <YAxis stroke="#888" />
-                  <Tooltip />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: "#000000",
+                      border: "1px solid #2A2A2A",
+                      borderRadius: "8px",
+                      color: "#ffffff"
+                    }}
+                    labelStyle={{
+                      color: "#ffffff"
+                    }}
+                  />
                   <Line
                     type="monotone"
                     dataKey="total"
@@ -442,20 +453,20 @@ export default function Page() {
             so every trade is fast, fair, and efficient.
           </p>
 
-          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-6 md:grid-cols-8 gap-3">
             {amms.length > 0 ? (
               amms.slice(0, 16).map((amm: Amm) => (
                 <div
                   key={amm.key || amm.name}
-                  className="flex items-center gap-1 p-3 bg-[#1A1A1A] border border-[#2A2A2A] hover:border-[#FFD600] transition-all duration-200 cursor-pointer group"
+                  className="flex flex-col sm:flex-row items-center gap-2 sm:gap-1 p-3 bg-[#1A1A1A] border border-[#2A2A2A] hover:border-[#FFD600] transition-all duration-200 cursor-pointer group"
                 >
-                  <div className="w-4 h-4 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <div className="w-10 h-10 sm:w-4 sm:h-4 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
                     {(amm.logoURI || amm.logo) ? (
                       <Image
                         src={amm.logoURI || amm.logo || ''}
                         alt={amm.name}
-                        width={40}
-                        height={40}
+                        width={48}
+                        height={48}
                         className="w-full h-full object-cover"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none'
@@ -463,7 +474,7 @@ export default function Page() {
                       />
                     ) : null}
                   </div>
-                  <span className="text-white text-[10px] font-medium text-center leading-tight">
+                  <span className="text-white text-xs sm:text-[10px] font-medium text-center leading-tight">
                     {amm.name}
                   </span>
                 </div>

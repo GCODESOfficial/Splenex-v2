@@ -1,5 +1,65 @@
 import { useState, useCallback } from 'react';
 
+const normalizeHexQuantity = (value?: string | number | bigint | null) => {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value === 'bigint') {
+    return `0x${value.toString(16)}`;
+  }
+
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined;
+    return `0x${BigInt(Math.trunc(value)).toString(16)}`;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    if (trimmed.startsWith('0x') || trimmed.startsWith('0X')) {
+      return trimmed === '0x' || trimmed === '0X' ? '0x0' : trimmed;
+    }
+    try {
+      return `0x${BigInt(trimmed).toString(16)}`;
+    } catch (error) {
+      console.warn('[Aggregator Hook] Unable to normalize hex quantity', trimmed, error);
+      return undefined;
+    }
+  }
+
+  try {
+    return `0x${BigInt(value).toString(16)}`;
+  } catch (error) {
+    console.warn('[Aggregator Hook] Unable to normalize hex quantity', value, error);
+    return undefined;
+  }
+};
+
+const buildTxParams = (options: {
+  from: string;
+  to: string;
+  data: string;
+  value?: string;
+  gas?: string;
+}) => {
+  const txParams: Record<string, string> = {
+    from: options.from,
+    to: options.to,
+    data: options.data,
+  };
+
+  const normalizedValue = normalizeHexQuantity(options.value) || '0x0';
+  txParams.value = normalizedValue;
+
+  const normalizedGas = normalizeHexQuantity(options.gas);
+  if (normalizedGas) {
+    txParams.gas = normalizedGas;
+  }
+
+  return txParams;
+};
+
 interface AggregatorQuoteRequest {
   fromToken: string;
   toToken: string;
@@ -86,13 +146,13 @@ export function useOneInch() {
 
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
-        params: [{
+        params: [buildTxParams({
           from: fromAddress,
           to: quote.transactionData.to,
           data: quote.transactionData.data,
           value: quote.transactionData.value,
           gas: quote.gasEstimate,
-        }],
+        })],
       });
 
       console.log("[1inch Hook] ✅ Transaction sent:", txHash);
@@ -168,13 +228,13 @@ export function useZeroX() {
 
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
-        params: [{
+        params: [buildTxParams({
           from: fromAddress,
           to: quote.transactionData.to,
           data: quote.transactionData.data,
           value: quote.transactionData.value,
           gas: quote.gasEstimate,
-        }],
+        })],
       });
 
       console.log("[0x Hook] ✅ Transaction sent:", txHash);
@@ -250,13 +310,13 @@ export function useParaSwap() {
 
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
-        params: [{
+        params: [buildTxParams({
           from: fromAddress,
           to: quote.transactionData.to,
           data: quote.transactionData.data,
           value: quote.transactionData.value,
           gas: quote.gasEstimate,
-        }],
+        })],
       });
 
       console.log("[ParaSwap Hook] ✅ Transaction sent:", txHash);
@@ -332,13 +392,13 @@ export function useUniswapV3() {
 
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
-        params: [{
+        params: [buildTxParams({
           from: fromAddress,
           to: quote.transactionData.to,
           data: quote.transactionData.data,
           value: quote.transactionData.value,
           gas: quote.gasEstimate,
-        }],
+        })],
       });
 
       console.log("[Uniswap V3 Hook] ✅ Transaction sent:", txHash);
@@ -414,13 +474,13 @@ export function useSushiSwap() {
 
       const txHash = await window.ethereum.request({
         method: 'eth_sendTransaction',
-        params: [{
+        params: [buildTxParams({
           from: fromAddress,
           to: quote.transactionData.to,
           data: quote.transactionData.data,
           value: quote.transactionData.value,
           gas: quote.gasEstimate,
-        }],
+        })],
       });
 
       console.log("[SushiSwap Hook] ✅ Transaction sent:", txHash);

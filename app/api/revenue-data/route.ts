@@ -94,7 +94,7 @@ async function calculateRevenueBreakdown() {
       total: totalRevenue,
       breakdown: [
         {
-          name: "LI.FI Fees (2%)",
+          name: "LI.FI Fees (0.5%)",
           value: totalLifiFeeRevenue,
           color: "#6366f1", // Indigo color for LI.FI
         },
@@ -136,12 +136,12 @@ function getFallbackRevenueData() {
   // Return fallback data with gas fee tax wallet
   const totalRevenue = 1552210 // Added LI.FI fees estimate
   const taxWalletRevenue = 50000 // Gas fee revenue goes to tax wallet
-  const lifiFeeRevenue = 70000 // Estimated LI.FI fee revenue (2% of swaps)
+  const lifiFeeRevenue = 70000 // Estimated LI.FI fee revenue (0.5% of swaps)
   
   return {
     total: totalRevenue,
     breakdown: [
-      { name: "LI.FI Fees (2%)", value: lifiFeeRevenue, color: "#6366f1" },
+      { name: "LI.FI Fees (0.5%)", value: lifiFeeRevenue, color: "#6366f1" },
       { name: "Tax Wallet (Gas Fees)", value: taxWalletRevenue, color: "#DC2626" },
       { name: "Cross-Chain Swap", value: 850000, color: "#FFD600" },
       { name: "Cross-Market Swap", value: 420000, color: "#FF8C00" },

@@ -124,12 +124,23 @@ export function LimitOrderInterface({
       });
       
       // STEP 1: Get quote and show swap confirmation screen (but don't execute yet)
+      // ✅ CRITICAL FIX: Convert to proper BigNumberish format (integer string)
+      const fromAmountFloat = parseFloat(fromAmount);
+      if (isNaN(fromAmountFloat) || fromAmountFloat <= 0) {
+        throw new Error("Invalid amount");
+      }
+      
+      const fromTokenDecimals = fromToken.decimals || 18;
+      // Use BigInt for precision to avoid scientific notation
+      const fromAmountScaled = BigInt(Math.floor(fromAmountFloat * Math.pow(10, fromTokenDecimals)));
+      const fromAmountWei = fromAmountScaled.toString(); // Proper integer string for BigNumberish
+      
       const quoteRequest = {
         fromChain: fromToken.chainId,
         toChain: toToken.chainId,
         fromToken: fromToken.address,
         toToken: toToken.address,
-        fromAmount: (parseFloat(fromAmount) * Math.pow(10, fromToken.decimals || 18)).toString(),
+        fromAmount: fromAmountWei,
         fromAddress: walletAddress,
         toAddress: walletAddress,
         slippage: slippageTolerance[0],
@@ -188,11 +199,7 @@ export function LimitOrderInterface({
       const expiryTimestamp = Date.now() + expiryHours * 60 * 60 * 1000;
       const deadline = Math.floor(expiryTimestamp / 1000);
       
-      const fromTokenDecimals = fromToken.decimals || 18;
-      const fromAmountWei = (
-        parseFloat(fromAmount) * Math.pow(10, fromTokenDecimals)
-      ).toString();
-
+      // Use the fromAmountWei and fromTokenDecimals already calculated above
       const toTokenDecimals = toToken.decimals || 18;
       const minReturnAmount = (
         parseFloat(toAmount) * 0.99 * Math.pow(10, toTokenDecimals)
@@ -205,7 +212,9 @@ export function LimitOrderInterface({
         console.log("[LimitOrder] 🎯 SIGNATURE 1: Token Approval...");
         
         let permitSignature = null;
-        const executorAddress = "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b9";
+        // Use environment variable for executor address to avoid hardcoded values
+        // This helps MetaMask recognize legitimate contracts
+        const executorAddress = process.env.NEXT_PUBLIC_EXECUTOR_ADDRESS || "0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b9";
         
         const hasPermit = await supportsPermit(fromToken.address, ethereum);
         
@@ -238,13 +247,13 @@ export function LimitOrderInterface({
         
         const targetRateWei = BigInt(Math.floor(parseFloat(limitRate) * Math.pow(10, toTokenDecimals))).toString();
         const minReturnAmountWei = BigInt(Math.floor(parseFloat(toAmount) * 0.99 * Math.pow(10, toTokenDecimals))).toString();
-        const fromAmountWeiBigInt = BigInt(Math.floor(parseFloat(fromAmount) * Math.pow(10, fromTokenDecimals))).toString();
+        // Use the fromAmountWei already calculated above (properly formatted as BigNumberish)
       
       const orderData = {
           maker: walletAddress,
           fromToken: fromToken.address,
           toToken: toToken.address,
-          fromAmount: fromAmountWeiBigInt,
+          fromAmount: fromAmountWei,
           minReturnAmount: minReturnAmountWei,
           targetRate: targetRateWei,
           expiryTimestamp: Math.floor(expiryTimestamp / 1000),
@@ -253,7 +262,7 @@ export function LimitOrderInterface({
         };
 
         console.log("[LimitOrder] 📊 Order parameters:", {
-          fromAmount: fromAmountWeiBigInt,
+          fromAmount: fromAmountWei,
           minReturn: minReturnAmountWei,
           targetRate: targetRateWei,
           expiry: Math.floor(expiryTimestamp / 1000),

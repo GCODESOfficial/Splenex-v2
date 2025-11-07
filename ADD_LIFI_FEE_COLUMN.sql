@@ -1,5 +1,5 @@
 -- Add LI.FI fee tracking column to swap_analytics table
--- This column stores the 2% fee collected from LI.FI swaps
+-- This column stores the 0.5% fee collected from LI.FI swaps
 
 -- Check if column exists, if not add it
 DO $$ 
@@ -21,5 +21,5 @@ BEGIN
 END $$;
 
 -- Add a comment to the column
-COMMENT ON COLUMN swap_analytics.lifi_fee_usd IS 'LI.FI transaction fee collected (2% of swap volume in USD)';
+COMMENT ON COLUMN swap_analytics.lifi_fee_usd IS 'LI.FI transaction fee collected (0.5% of swap volume in USD)';
 

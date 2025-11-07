@@ -3,7 +3,6 @@
 
 import { useState } from "react"
 import { SimpleSwapInterface } from "@/components/simple-swap-interface"
-import { ForexTradingInterface } from "@/components/forex-trading-interface"
 import { Button } from "@/components/ui/button"
 import { ArrowLeftRight, TrendingUp } from "lucide-react"
 
@@ -11,7 +10,7 @@ export default function HomePage() {
   const [activeTab, setActiveTab] = useState<"swap" | "forex">("swap")
 
   return (
-    <div className="md:min-h-screen bg-black">
+    <div className=" bg-black">
 
       <SimpleSwapInterface />
 

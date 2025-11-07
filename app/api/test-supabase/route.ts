@@ -31,8 +31,8 @@ export async function GET() {
       to_token: 'TEST',
       from_amount: '1',
       to_amount: '1',
-      from_chain: 1,
-      to_chain: 1,
+      from_chain_id: 1,
+      to_chain_id: 1,
       swap_volume_usd: 1,
       wallet_address: '0x0000000000000000000000000000000000000000',
     };

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import html2canvas from "html2canvas";
+import { useToast } from "@/components/ui/use-toast";
 
 interface LeaderboardEntry {
   rank: string | number;
@@ -29,6 +30,7 @@ function RankCardModal({
   onClose: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   // Allow ESC key to close modal
   useEffect(() => {
@@ -92,52 +94,97 @@ function RankCardModal({
     link.click();
   };
 
-  const handleShareOnX = async () => {
-    const dataUrl = await captureCard();
-    if (!dataUrl) return;
-
+  // Synchronous handler to open X immediately (avoids popup blocking)
+  const handleShareOnX = () => {
     const text = `🚀 Proud to be among Splenex's Top Traders! Ranked ${rank}/${total}. Join me on @Splenex - the revolutionizing trading marketplace!`;
+    const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(
+      text
+    )}&hashtags=Splenex,Trading,Leaderboard`;
 
-    // Convert data URL to blob
+    // 🪟 Open X IMMEDIATELY in synchronous context (avoids popup block)
+    const twitterWindow = window.open(
+      twitterUrl,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    // If popup blocked, show error
+    if (!twitterWindow || twitterWindow.closed || typeof twitterWindow.closed === "undefined") {
+      toast({
+        title: "Popup blocked",
+        description: "Please allow popups for this site and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Now start async image preparation in background
+    prepareAndShareImage(twitterWindow);
+  };
+
+  // Async function to prepare image after X is already open
+  const prepareAndShareImage = async (twitterWindow: Window | null) => {
+    // ✅ Show toast while generating
+    toast({
+      title: "Preparing your image...",
+      description: "X is open. Generating leaderboard card...",
+    });
+
+    // 🖼️ Generate image quietly in background
+    const dataUrl = await captureCard();
+    if (!dataUrl) {
+      toast({
+        title: "Image capture failed",
+        description: "X is open, but image capture failed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Convert to blob
     const response = await fetch(dataUrl);
     const blob = await response.blob();
     const file = new File([blob], "splenex-leaderboard.png", { type: "image/png" });
 
-    // Check if Web Share API is supported
+    // 🧩 Try Web Share API (mobile support)
     if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
-        // Use Web Share API to share with image
         await navigator.share({
           title: "My Splenex Leaderboard Achievement",
-          text: text,
+          text: `🚀 Proud to be among Splenex's Top Traders! Ranked ${rank}/${total}. Join me on @Splenex - the revolutionizing trading marketplace!`,
           files: [file],
         });
+        return;
       } catch (error) {
-        console.error("Error sharing:", error);
-        // Fallback: download and open Twitter
-        const link = document.createElement("a");
-        link.download = `splenex-leaderboard-${walletFull.slice(0, 8)}.png`;
-        link.href = dataUrl;
-        link.click();
-        
-        setTimeout(() => {
-          const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=Splenex,Trading,Leaderboard`;
-          window.open(twitterUrl, "_blank");
-        }, 100);
+        if (error instanceof Error && error.name !== "AbortError") console.error("Share failed:", error);
       }
-    } else {
-      // Fallback for browsers that don't support Web Share API
-      // Download the image and open Twitter
-      const link = document.createElement("a");
-      link.download = `splenex-leaderboard-${walletFull.slice(0, 8)}.png`;
-      link.href = dataUrl;
-      link.click();
-      
-      setTimeout(() => {
-        const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&hashtags=Splenex,Trading,Leaderboard`;
-        window.open(twitterUrl, "_blank");
-      }, 100);
     }
+
+    // 📋 Copy to clipboard fallback
+    if (navigator.clipboard && navigator.clipboard.write) {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": blob }),
+        ]);
+        toast({
+          title: "Image ready!",
+          description: "Paste (Ctrl+V / Cmd+V) in X to attach your card image.",
+        });
+        return;
+      } catch {
+        // Clipboard failed, fall through to download
+      }
+    }
+    
+    // 💾 Final fallback: download image
+    const link = document.createElement("a");
+    link.download = `splenex-leaderboard-${walletFull.slice(0, 8)}.png`;
+    link.href = dataUrl;
+    link.click();
+    toast({
+      title: "Image downloaded",
+      description: "Attach it manually to your X post.",
+    });
   };
 
   return (
@@ -201,10 +248,7 @@ function RankCardModal({
         style={{ 
           position: 'fixed',
           left: '-10000px',
-          top: 0,
-          width: '650px',
-          height: '400px',
-          overflow: 'hidden'
+          top: 0
         }}
       >
           {/* Social Card SVG as background */}
@@ -212,12 +256,7 @@ function RankCardModal({
             src="/images/Social Card.svg" 
             alt="Social Card"
             style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain'
+              display: 'block'
             }}
           />
 
@@ -226,7 +265,7 @@ function RankCardModal({
           <div style={{ 
             position: 'absolute', 
             bottom: '80px',
-            left: '25%',
+            left: '24%',
             transform: 'translateX(-20%)',
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
@@ -234,20 +273,20 @@ function RankCardModal({
           }}>
             {/* Row 1 - Whitelist Status */}
             <div style={{ display: 'flex', flexDirection: 'row', gap: '4px' }}>
-              <span style={{ color: '#C7C7C7', fontSize: '14px' }}>Whitelist Status:</span>
-              <span style={{ color: '#4ade80', fontWeight: '600', fontSize: '14px' }}>Pending</span>
+              <span style={{ color: '#C7C7C7', fontSize: '18px' }}>Whitelist Status:</span>
+              <span style={{ color: '#4ade80', fontWeight: '600', fontSize: '18px' }}>Pending</span>
             </div>
 
             {/* Row 1 - Transaction Count */}
             <div style={{ display: 'flex', flexDirection: 'row', gap: '4px' }}>
-              <span style={{ color: '#C7C7C7', fontSize: '14px' }}>Tran. Count:</span>
-              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{entry.transactionCount}</span>
+              <span style={{ color: '#C7C7C7', fontSize: '18px' }}>Tran. Count:</span>
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '18px' }}>{entry.transactionCount}</span>
             </div>
 
             {/* Row 2 - Active Days */}
             <div style={{ display: 'flex', flexDirection: 'row', gap: '4px' }}>
-              <span style={{ color: '#C7C7C7', fontSize: '14px' }}>Active Days:</span>
-              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '14px' }}>{entry.activeDays}</span>
+              <span style={{ color: '#C7C7C7', fontSize: '18px' }}>Active Days:</span>
+              <span style={{ color: 'white', fontWeight: 'bold', fontSize: '18px' }}>{entry.activeDays}</span>
             </div>
 
             {/* Row 2 - Rank */}
@@ -601,54 +640,58 @@ export default function TradingLeaderboard() {
         </div>
 
         {/* ✅ Table */}
-        <div className="bg-[#121214] overflow-hidden max-w-[95%] mx-auto">
-          <table className="w-full overflow-x-auto text-left text-sm">
-            <thead className="text-[#C7C7C7] font-medium text-sm">
-              <tr>
-                <th className="px-4 py-3">Rank</th>
-                <th className="px-4 py-3">Wallet Address</th>
-                <th className="px-4 py-3">
-                  Trading Volume
-                </th>
-                <th className="px-4 py-3">
-                  Transaction Count
-                </th>
-                <th className="px-4 py-3">Active Days</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedData.map((row, index) => (
-                <tr key={index} className="border-t border-[#1E1E1E]">
-                  <td className="px-4 py-3 font-semibold">
-                    {typeof row.rank === "string" &&
-                    row.rank.startsWith("/images") ? (
-                      <Image
-                        src={row.rank}
-                        alt={`Rank ${index + 1}`}
-                        width={28}
-                        height={28}
-                        className="object-contain"
-                      />
-                    ) : (
-                      row.rank
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-300">
-                    {hideWallet(row.wallet)}
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.tradingVolume}
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.transactionCount}
-                  </td>
-                  <td className="px-4 py-3">
-                    {row.activeDays}
-                  </td>
+        <div className="bg-[#121214] max-w-[95%] mx-auto">
+          <div className="overflow-x-auto -mx-2 md:mx-0">
+            <table className="w-full min-w-[600px] text-left text-sm">
+              <thead className="text-[#C7C7C7] font-medium text-sm">
+                <tr>
+                  <th className="px-4 py-3 whitespace-nowrap text-center">Rank</th>
+                  <th className="px-4 py-3 whitespace-nowrap">Wallet Address</th>
+                  <th className="px-4 py-3 whitespace-nowrap">
+                    Trading Volume
+                  </th>
+                  <th className="px-4 py-3 whitespace-nowrap">
+                    Transaction Count
+                  </th>
+                  <th className="px-4 py-3 whitespace-nowrap">Active Days</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {paginatedData.map((row, index) => (
+                  <tr key={index} className="border-t border-[#1E1E1E]">
+                    <td className="px-4 py-3 font-semibold whitespace-nowrap text-center">
+                      {typeof row.rank === "string" &&
+                      row.rank.startsWith("/images") ? (
+                        <div className="flex justify-center items-center">
+                          <Image
+                            src={row.rank}
+                            alt={`Rank ${index + 1}`}
+                            width={28}
+                            height={28}
+                            className="object-contain"
+                          />
+                        </div>
+                      ) : (
+                        row.rank
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-300 whitespace-nowrap">
+                      {hideWallet(row.wallet)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {row.tradingVolume}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {row.transactionCount}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {row.activeDays}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* ✅ Pagination */}

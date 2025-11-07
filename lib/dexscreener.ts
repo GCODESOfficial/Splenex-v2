@@ -23,6 +23,11 @@ export interface DEXScreenerPair {
   };
   priceNative: string;
   priceUsd: string;
+  info?: {
+    imageUrl?: string;
+    header?: string;
+    openGraph?: string;
+  };
   txns: {
     m5: { buys: number; sells: number };
     h1: { buys: number; sells: number };
@@ -123,7 +128,7 @@ export async function searchDEXScreenerTokens(query: string): Promise<DEXScreene
  */
 export async function getDEXScreenerChainPairs(chainId: string, page = 1): Promise<DEXScreenerPair[]> {
   try {
-    // Map numeric chainId to DEXScreener chain names
+    // Map numeric chainId to DEXScreener chain names (full mapping)
     const chainMap: Record<string, string> = {
       '1': 'ethereum',
       '56': 'bsc',
@@ -133,17 +138,69 @@ export async function getDEXScreenerChainPairs(chainId: string, page = 1): Promi
       '8453': 'base',
       '43114': 'avalanche',
       '250': 'fantom',
+      '100': 'gnosis',
+      '324': 'zksync',
+      '59144': 'linea',
+      '534352': 'scroll',
+      '42170': 'arbitrum-nova',
+      '1101': 'polygon-zkevm',
+      // Additional chains
+      '19': 'songbird',
+      '108': 'thundercore',
+      '7777777': 'zora',
+      '128': 'heco',
+      '199': 'bittorrent',
+      '1666600000': 'harmony',
+      '106': 'velas',
+      '57': 'syscoin',
+      '361': 'theta',
+      '40': 'telos',
+      '888': 'wanchain',
+      '88': 'tomochain',
+      '20': 'elastos',
+      '4689': 'iotex',
+      '9001': 'evmos',
+      '2222': 'kava',
+      '82': 'meter',
     };
 
-    const chainName = chainMap[chainId] || 'ethereum';
+    const chainName = chainMap[chainId];
+    if (!chainName) {
+      console.warn(`[DEXScreener] Chain ${chainId} not supported`);
+      return [];
+    }
+
     const response = await fetch(`${DEXSCREENER_API}/pairs/${chainName}?page=${page}`);
     
     if (!response.ok) {
-      throw new Error(`DEXScreener chain pairs error: ${response.status}`);
+      console.warn(`[DEXScreener] Chain pairs error for ${chainName}: ${response.status}`);
+      return [];
     }
 
     const data = await response.json();
-    return data.pairs || [];
+    
+    // Handle different response formats
+    if (Array.isArray(data.pairs)) {
+      return data.pairs;
+    }
+    
+    // Some chains return null pairs
+    if (data.pairs === null || data.pairs === undefined) {
+      if (page === 1) {
+        console.warn(`[DEXScreener] No pairs available for ${chainName} (chain ${chainId}) - chain may not be supported`);
+      }
+      return [];
+    }
+    
+    // If pairs is an object (not array), it might be a different format
+    if (typeof data.pairs === 'object' && !Array.isArray(data.pairs)) {
+      if (page === 1) {
+        console.warn(`[DEXScreener] Unexpected pairs format for ${chainName}:`, typeof data.pairs);
+      }
+      return [];
+    }
+    
+    return [];
   } catch (error) {
     console.error("[DEXScreener] Error fetching chain pairs:", error);
     return [];

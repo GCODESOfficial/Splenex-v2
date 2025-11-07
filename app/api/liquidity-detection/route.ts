@@ -180,15 +180,23 @@ export async function POST(request: NextRequest) {
     
     // Find available protocols for this chain
     const availableProtocols = Object.entries(PROTOCOL_LIQUIDITY)
-      .filter(([_, config]) => config.chains.includes(body.chainId))
-      .map(([protocol, config]) => ({
+      .filter(([_, protocolConfig]) => protocolConfig.chains.includes(body.chainId))
+      .map(([protocol, protocolConfig]) => ({
         protocol,
         liquidity: pairLiquidity,
         priceImpact: calculatePriceImpact(pairLiquidity, body.amount || "1000000"),
-        confidence: config.confidence,
-        fees: config.avgFees,
+        confidence: protocolConfig.confidence,
+        fees: protocolConfig.avgFees,
+        minLiquidity: protocolConfig.minLiquidity,
       }))
-      .filter(protocol => BigInt(protocol.liquidity) >= BigInt(config.minLiquidity))
+      .filter((protocol) => {
+        try {
+          return BigInt(protocol.liquidity) >= BigInt(protocol.minLiquidity);
+        } catch {
+          return false;
+        }
+      })
+      .map(({ minLiquidity, ...rest }) => rest)
       .sort((a, b) => b.confidence - a.confidence);
 
     if (availableProtocols.length === 0) {

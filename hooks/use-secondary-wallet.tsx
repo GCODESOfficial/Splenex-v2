@@ -284,4 +284,3 @@ export function useSecondaryWallet() {
   }
   return context
 }
-

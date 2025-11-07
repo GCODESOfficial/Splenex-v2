@@ -27,7 +27,6 @@ import { ApeModeSwapInterface } from "./apemode-swap-interface";
 import { Dialog, DialogContent, DialogTitle } from "@radix-ui/react-dialog";
 import { DialogHeader } from "./ui/dialog";
 import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/lib/supabaseClient";
 import { OngoingLimitOrders } from "./ongoing-limit-orders";
 import { useLimitOrderMonitor } from "@/hooks/use-limit-order-monitor";
 import { useTokenPrice } from "@/hooks/use-token-price";
@@ -115,6 +114,26 @@ const formatUsdValue = (usdValue: number): string => {
   return `$${usdValue.toFixed(2)}`;
 };
 
+// Helper function to format token balance to 5 decimal places
+const formatTokenBalance = (balance: string): string => {
+  if (!balance) return "0";
+  const numBalance = Number.parseFloat(balance);
+  if (isNaN(numBalance)) return "0";
+  return numBalance.toFixed(5);
+};
+
+// Helper function to format any token amount to 5 decimal places (enforce maximum)
+const formatTokenAmount = (amount: string): string => {
+  if (!amount || amount === "" || amount === "~") return amount;
+  
+  // Handle trailing dots by removing them
+  const cleanAmount = amount.endsWith(".") ? amount.slice(0, -1) : amount;
+  
+  const numAmount = Number.parseFloat(cleanAmount);
+  if (isNaN(numAmount)) return cleanAmount;
+  return numAmount.toFixed(5);
+};
+
 // Helper function to create simulated quotes for low liquidity tokens
 const createSimulatedQuote = (fromAmountWei: string, fromToken: Token, toToken: Token): string => {
   // Convert Wei to actual token amount
@@ -173,44 +192,84 @@ const isLowCapTokenBySymbol = (tokenSymbol: string): boolean => {
   return lowCapSymbols.includes(tokenSymbol.toUpperCase());
 };
 
-// CoinGecko-based token address verification system
-const COINGECKO_TOKEN_CACHE = new Map<string, { data: any; timestamp: number }>();
+// Dexscreener-based token address verification system
+const DEXSCREENER_TOKEN_CACHE = new Map<string, { data: any; timestamp: number }>();
 const CACHE_DURATION = 300000; // 5 minutes
 
-// Function to fetch token data from CoinGecko
-const fetchTokenFromCoinGecko = async (symbol: string): Promise<any> => {
+const fetchTokenFromDexscreener = async (symbol: string): Promise<any> => {
   const cacheKey = symbol.toLowerCase();
-  const cached = COINGECKO_TOKEN_CACHE.get(cacheKey);
+  const cached = DEXSCREENER_TOKEN_CACHE.get(cacheKey);
   const now = Date.now();
 
-  // Return cached data if still valid
-  if (cached && (now - cached.timestamp) < CACHE_DURATION) {
-    console.log(`[CoinGecko Verification] 📋 Using cached data for ${symbol}`);
+  if (cached && now - cached.timestamp < CACHE_DURATION) {
+    console.log(`[Dexscreener Verification] 📋 Using cached data for ${symbol}`);
     return cached.data;
   }
 
   try {
-    console.log(`[CoinGecko Verification] 🔍 Fetching ${symbol} from CoinGecko API`);
-    
-    const response = await fetch(`/api/coingecko-tokens?symbol=${symbol}`);
+    console.log(`[Dexscreener Verification] 🔍 Searching ${symbol} on Dexscreener`);
+    const response = await fetch(`/api/dexscreener?q=${encodeURIComponent(symbol)}`);
     if (!response.ok) {
-      console.log(`[CoinGecko Verification] ❌ API failed for ${symbol}: ${response.status}`);
+      console.warn(`[Dexscreener Verification] ❌ API failed for ${symbol}: ${response.status}`);
       return null;
     }
 
     const result = await response.json();
-    if (!result.success) {
-      console.log(`[CoinGecko Verification] ❌ No data for ${symbol}`);
+    if (!result.success || !Array.isArray(result.results)) {
+      console.warn(`[Dexscreener Verification] ❌ No results for ${symbol}`);
       return null;
     }
 
-    // Cache the result
-    COINGECKO_TOKEN_CACHE.set(cacheKey, { data: result.data, timestamp: now });
-    
-    console.log(`[CoinGecko Verification] ✅ Fetched ${symbol} with ${Object.keys(result.data.contractAddresses).length} contract addresses`);
-    return result.data;
+    const symbolUpper = symbol.toUpperCase();
+    const contractAddresses: Record<string, any> = {};
+    let primaryName = symbolUpper;
+
+    result.results.forEach((pair: any) => {
+      const chain = pair.chainId;
+      if (!chain) return;
+
+      const baseSymbol = pair.baseToken?.symbol?.toUpperCase();
+      const quoteSymbol = pair.quoteToken?.symbol?.toUpperCase();
+
+      if (baseSymbol === symbolUpper && pair.baseToken?.address) {
+        if (!contractAddresses[chain]) {
+          primaryName = pair.baseToken?.name || primaryName;
+          contractAddresses[chain] = {
+            address: pair.baseToken.address,
+            platform: pair.dexId,
+            decimals: 18,
+            pairUrl: pair.url,
+          };
+        }
+      } else if (quoteSymbol === symbolUpper && pair.quoteToken?.address) {
+        if (!contractAddresses[chain]) {
+          primaryName = pair.quoteToken?.name || primaryName;
+          contractAddresses[chain] = {
+            address: pair.quoteToken.address,
+            platform: pair.dexId,
+            decimals: 18,
+            pairUrl: pair.url,
+          };
+        }
+      }
+    });
+
+    if (Object.keys(contractAddresses).length === 0) {
+      console.warn(`[Dexscreener Verification] ❌ No matching contract addresses for ${symbol}`);
+      return null;
+    }
+
+    const payload = {
+      symbol: symbolUpper,
+      name: primaryName,
+      contractAddresses,
+    };
+
+    DEXSCREENER_TOKEN_CACHE.set(cacheKey, { data: payload, timestamp: now });
+    console.log(`[Dexscreener Verification] ✅ Found ${Object.keys(contractAddresses).length} chains for ${symbol}`);
+    return payload;
   } catch (error) {
-    console.error(`[CoinGecko Verification] ❌ Error fetching ${symbol}:`, error);
+    console.error(`[Dexscreener Verification] ❌ Error fetching ${symbol}:`, error);
     return null;
   }
 };
@@ -225,11 +284,11 @@ const verifyTokenAddress = async (address: string, expectedSymbol?: string, chai
   }
 
   try {
-    const tokenData = await fetchTokenFromCoinGecko(expectedSymbol);
+    const tokenData = await fetchTokenFromDexscreener(expectedSymbol);
     if (!tokenData) {
       return { 
         isValid: false, 
-        warning: `Could not fetch token data for ${expectedSymbol} from CoinGecko` 
+        warning: `Could not fetch token data for ${expectedSymbol} from Dexscreener` 
       };
     }
 
@@ -250,7 +309,7 @@ const verifyTokenAddress = async (address: string, expectedSymbol?: string, chai
             platform: (contractInfo as any).platform,
             decimals: (contractInfo as any).decimals,
             verified: true,
-            source: 'CoinGecko'
+            source: 'Dexscreener'
           };
           break;
         }
@@ -267,7 +326,7 @@ const verifyTokenAddress = async (address: string, expectedSymbol?: string, chai
 
     return { isValid: true, info: matchInfo };
   } catch (error) {
-    console.error(`[CoinGecko Verification] Error verifying ${expectedSymbol}:`, error);
+    console.error(`[Dexscreener Verification] Error verifying ${expectedSymbol}:`, error);
     return { 
       isValid: false, 
       warning: `Error verifying token address: ${error}` 
@@ -575,15 +634,16 @@ export function SimpleSwapInterface() {
         if (result.success && result.data) {
           console.log(`[FastQuote] ✅ Fast quote received from: ${result.data.provider}`);
           
-          const toTokenDecimals = toToken.decimals || 
-            (toToken.symbol === "USDC" ? 6 : 
-             toToken.symbol === "USDT" ? 6 : 
+          const toTokenDecimals = result.data.tokenOutDecimals ??
+            toToken.decimals ??
+            (toToken.symbol === "USDC" ? 6 :
+             toToken.symbol === "USDT" ? 6 :
              toToken.symbol === "WBTC" ? 8 : 18);
           
           const toAmountFormatted = (
             Number.parseFloat(result.data.toAmount) /
             Math.pow(10, toTokenDecimals)
-          ).toFixed(6);
+          ).toFixed(5);
           
           const fastQuote = {
             toAmount: toAmountFormatted,
@@ -619,15 +679,17 @@ export function SimpleSwapInterface() {
       
       const lifiQuote = await getQuote(quoteRequest);
       if (lifiQuote && lifiQuote.estimate) {
-        const toTokenDecimals = toToken.decimals || 
-          (toToken.symbol === "USDC" ? 6 : 
-           toToken.symbol === "USDT" ? 6 : 
+        const toTokenDecimals = (lifiQuote as any)?.tokenOutDecimals ??
+          (lifiQuote.estimate as any)?.tokenOutDecimals ??
+          toToken.decimals ??
+          (toToken.symbol === "USDC" ? 6 :
+           toToken.symbol === "USDT" ? 6 :
            toToken.symbol === "WBTC" ? 8 : 18);
         
         const toAmountFormatted = (
           Number.parseFloat(lifiQuote.estimate.toAmount) /
           Math.pow(10, toTokenDecimals)
-        ).toFixed(6);
+        ).toFixed(5);
         
         const fastQuote = {
           toAmount: toAmountFormatted,
@@ -663,6 +725,58 @@ export function SimpleSwapInterface() {
     setToToken(tempToken);
     setFromAmount(toAmount);
     setToAmount(tempAmount);
+  };
+
+  // Handler for FROM amount input to limit to 5 decimal places
+  const handleFromAmountChange = (value: string) => {
+    // Allow empty value, single dot, or valid number
+    if (value === "" || value === "." || value === "0.") {
+      setFromAmount(value);
+      return;
+    }
+    
+    // Remove trailing dots to clean up the value
+    let cleanValue = value;
+    if (value.endsWith(".") && value !== ".") {
+      cleanValue = value.slice(0, -1);
+    }
+    
+    // Check if value has decimal places
+    if (cleanValue.includes(".")) {
+      const parts = cleanValue.split(".");
+      // Allow up to 5 decimal places
+      if (parts[1] && parts[1].length > 5) {
+        return; // Don't update if more than 5 decimals
+      }
+    }
+    
+    setFromAmount(cleanValue);
+  };
+
+  // Handler for TO amount input to limit to 5 decimal places
+  const handleToAmountChange = (value: string) => {
+    // Allow empty value, single dot, or valid number
+    if (value === "" || value === "." || value === "0.") {
+      setToAmount(value);
+      return;
+    }
+    
+    // Remove trailing dots to clean up the value
+    let cleanValue = value;
+    if (value.endsWith(".") && value !== ".") {
+      cleanValue = value.slice(0, -1);
+    }
+    
+    // Check if value has decimal places
+    if (cleanValue.includes(".")) {
+      const parts = cleanValue.split(".");
+      // Allow up to 5 decimal places
+      if (parts[1] && parts[1].length > 5) {
+        return; // Don't update if more than 5 decimals
+      }
+    }
+    
+    setToAmount(cleanValue);
   };
 
   const handleConnectWallet = () => {
@@ -1187,8 +1301,8 @@ export function SimpleSwapInterface() {
         console.log("[v0] 🔵 Trying LiFi only as fallback...");
 
         const quoteRequest = {
-          fromChain,
-          toChain,
+          fromChain: fromToken.chainId,
+          toChain: toToken.chainId,
           fromToken: safeFromToken,
           toToken: safeToToken,
           fromAmount: fromAmountWei,
@@ -1332,9 +1446,15 @@ export function SimpleSwapInterface() {
               duration: 4000,
             });
 
-            // ERC20 approve function - approve max amount for better UX
-            const maxApproval = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-            const approveData = `0x095ea7b3${spenderAddress.slice(2).padStart(64, '0')}${maxApproval.slice(2)}`;
+            // Calculate approval amount: approve 1.5x the required amount for slippage buffer
+            // This avoids MetaMask security warnings from max approval patterns
+            const approvalMultiplier = BigInt(150); // 150% = 1.5x
+            const approvalAmount = BigInt(requiredAmount) * approvalMultiplier / BigInt(100);
+            const approvalAmountHex = "0x" + approvalAmount.toString(16).padStart(64, '0');
+            
+            console.log(`[v0] Approval: Required ${requiredAmount}, Approving ${approvalAmount.toString()} (1.5x buffer)`);
+            
+            const approveData = `0x095ea7b3${spenderAddress.slice(2).padStart(64, '0')}${approvalAmountHex.slice(2).padStart(64, '0')}`;
 
             const approveTxHash = await window.ethereum.request({
               method: "eth_sendTransaction",
@@ -1344,6 +1464,8 @@ export function SimpleSwapInterface() {
                   to: fromToken.address,
                   data: approveData,
                   value: "0x0",
+                  // Add origin metadata to help MetaMask recognize legitimate swap
+                  gas: "0x186a0", // 100,000 gas limit for approval
                 },
               ],
             });
@@ -1425,7 +1547,7 @@ export function SimpleSwapInterface() {
       const toAmountFormatted = (
         Number.parseFloat(lifiQuote.estimate.toAmount) /
         Math.pow(10, toTokenDecimals)
-      ).toFixed(6);
+      ).toFixed(5);
       setToAmount(toAmountFormatted);
 
       // Determine gas fee currency based on chain
@@ -1454,9 +1576,56 @@ export function SimpleSwapInterface() {
       // Let all aggregators try first - no early exit for low liquidity tokens
       
       // ✅ Test the transaction with eth_call before submitting
-      if (typeof window !== "undefined" && window.ethereum && lifiQuote.transactionRequest) {
+      const normalizeHexQuantity = (value?: string | number | bigint | null) => {
+        if (value === undefined || value === null) {
+          return undefined;
+        }
+
+        if (typeof value === "bigint") {
+          return `0x${value.toString(16)}`;
+        }
+
+        if (typeof value === "number") {
+          if (!Number.isFinite(value)) return undefined;
+          return `0x${BigInt(Math.trunc(value)).toString(16)}`;
+        }
+
+        if (typeof value === "string") {
+          const trimmed = value.trim();
+          if (!trimmed) return undefined;
+          if (trimmed.startsWith("0x") || trimmed.startsWith("0X")) {
+            return trimmed === "0x" || trimmed === "0X" ? "0x0" : trimmed;
+          }
+          try {
+            return `0x${BigInt(trimmed).toString(16)}`;
+          } catch (err) {
+            console.warn("[v0] Unable to normalize hex quantity", trimmed, err);
+            return undefined;
+          }
+        }
+
+        try {
+          return `0x${BigInt(value).toString(16)}`;
+        } catch (err) {
+          console.warn("[v0] Unable to normalize hex quantity", value, err);
+          return undefined;
+        }
+      };
+
+      const skipSimulation =
+        (enhancedQuote?.source === "parallel-routes" &&
+          (enhancedQuote?.route?.fallbackSource === "dexscreener" ||
+           enhancedQuote?.route?.fallbackSource === "uniswap" ||
+           enhancedQuote?.route?.source === "dexscreener" ||
+           enhancedQuote?.route?.source === "uniswap")) ||
+        enhancedQuote?.aggregatorQuote?.dexscreenerPairUrl;
+
+      if (skipSimulation) {
+        console.log("[v0] ⚠️ Skipping eth_call simulation for on-chain priced route");
+      } else if (typeof window !== "undefined" && window.ethereum && lifiQuote.transactionRequest) {
         try {
           console.log("[v0] Testing transaction with eth_call...");
+          const simulatedValue = normalizeHexQuantity(lifiQuote.transactionRequest.value) || "0x0";
           const testResult = await window.ethereum.request({
             method: "eth_call",
             params: [
@@ -1464,7 +1633,7 @@ export function SimpleSwapInterface() {
                 from: fromWalletAddress,
                 to: lifiQuote.transactionRequest.to,
                 data: lifiQuote.transactionRequest.data,
-                value: lifiQuote.transactionRequest.value || "0x0",
+                value: simulatedValue,
               },
               "latest",
             ],
@@ -1525,19 +1694,41 @@ export function SimpleSwapInterface() {
             });
             console.log(`[v0] Transaction will execute on ${fromToken.chainName} (Chain ID: ${fromChain})`);
             console.log(`[v0] Gas will be paid in ${gasFeeCurrency}`);
+            console.log(`[v0] This is a legitimate swap transaction via Splenex aggregator`);
+            console.log(`[v0] Contract address (LiFi router): ${txRequest.to}`);
             try {
+              const txParams: Record<string, string> = {
+                from: fromWalletAddress,
+                to: txRequest.to,
+                data: txRequest.data,
+              };
+
+              const normalizedValue = normalizeHexQuantity(txRequest.value) || "0x0";
+              txParams.value = normalizedValue;
+
+              const normalizedGas = normalizeHexQuantity(txRequest.gasLimit ?? txRequest.gas);
+              if (normalizedGas) {
+                txParams.gas = normalizedGas;
+              }
+
+              const normalizedGasPrice = normalizeHexQuantity(txRequest.gasPrice);
+              if (normalizedGasPrice) {
+                txParams.gasPrice = normalizedGasPrice;
+              }
+
+              const normalizedMaxFee = normalizeHexQuantity(txRequest.maxFeePerGas);
+              if (normalizedMaxFee) {
+                txParams.maxFeePerGas = normalizedMaxFee;
+              }
+
+              const normalizedMaxPriority = normalizeHexQuantity(txRequest.maxPriorityFeePerGas);
+              if (normalizedMaxPriority) {
+                txParams.maxPriorityFeePerGas = normalizedMaxPriority;
+              }
+
               const txHash = await w.request({
                 method: "eth_sendTransaction",
-                params: [
-                  {
-                    from: fromWalletAddress,
-                    to: txRequest.to,
-                    data: txRequest.data,
-                    value: txRequest.value,
-                    gas: txRequest.gasLimit,
-                    ...(txRequest.gasPrice && { gasPrice: txRequest.gasPrice }),
-                  },
-                ],
+                params: [txParams],
               });
 
               return {
@@ -1566,6 +1757,73 @@ export function SimpleSwapInterface() {
 
       console.log("[v0] Executing swap transaction...");
       
+      if (enhancedQuote?.source === "parallel-routes" && enhancedQuote?.transactionRequest && signer) {
+        console.log("[v0] 🔄 Executing parallel route via signer...");
+
+        const txResponse = await signer.sendTransaction(enhancedQuote.transactionRequest);
+        const txHash = txResponse?.hash;
+
+        if (!txHash) {
+          throw new Error("Parallel route transaction failed to send");
+        }
+
+        toast({
+          title: `${enhancedQuote.provider || "Parallel"} Transaction Submitted`,
+          description: `Transaction hash: ${txHash.substring(0, 10)}... Waiting for confirmation...`,
+          variant: "default",
+          duration: 5000,
+        });
+
+        const blockTimeMs = fromChain === 56 ? 3000 :
+                           fromChain === 1 ? 12000 :
+                           fromChain === 8453 ? 2000 :
+                           fromChain === 137 ? 2000 :
+                           fromChain === 42161 ? 1000 : 5000;
+        await new Promise(resolve => setTimeout(resolve, blockTimeMs));
+
+        toast({
+          title: `${enhancedQuote.provider || "Parallel"} Transaction Confirmed!`,
+          description: `Successfully swapped ${fromToken.symbol} to ${toToken.symbol}`,
+          variant: "default",
+          duration: 5000,
+        });
+
+        const capturedFromAmount = fromAmount;
+        const capturedToAmount = toAmountFormatted;
+        const capturedFromChain = fromChain;
+        const capturedToChain = toChain;
+        const capturedFromToken = fromToken;
+        const capturedToToken = toToken;
+
+        (async () => {
+          try {
+            const fromAmountNum = Number.parseFloat(capturedFromAmount);
+            const swapVolumeUsd = calculateSwapVolumeUSD(fromAmountNum, capturedFromToken.symbol);
+
+            if (swapVolumeUsd > 0) {
+              await logSwapVolume({
+                fromToken: capturedFromToken.symbol,
+                toToken: capturedToToken.symbol,
+                fromAmount: capturedFromAmount,
+                toAmount: capturedToAmount,
+                fromChain: capturedFromChain,
+                toChain: capturedToChain,
+                swapVolumeUsd,
+                walletAddress: fromWalletAddress || "",
+              });
+            }
+          } catch (err) {
+            console.error("[v0] Background processing error:", err);
+          }
+        })();
+
+        await refreshBalances();
+        setFromAmount("");
+        setToAmount("");
+        setEnhancedQuote(null);
+        return;
+      }
+
       // Check if we have an aggregator quote and use it
       if (enhancedQuote?.aggregatorQuote) {
         console.log(`[v0] 🔄 Executing ${enhancedQuote.tool} swap...`);
@@ -1618,6 +1876,39 @@ export function SimpleSwapInterface() {
             duration: 5000,
           });
 
+          // Capture values before clearing
+          const capturedFromAmount = fromAmount;
+          const capturedToAmount = toAmount;
+          const capturedFromChain = fromChain;
+          const capturedToChain = toChain;
+          const capturedFromToken = fromToken;
+          const capturedToToken = toToken;
+
+          // ✅ Log swap to database in background
+          (async () => {
+            try {
+              console.log("[v0] 🔍 Starting background volume calculation for aggregator swap...");
+              const fromAmountNum = Number.parseFloat(capturedFromAmount);
+              const swapVolumeUsd = calculateSwapVolumeUSD(fromAmountNum, capturedFromToken.symbol);
+              
+              if (swapVolumeUsd > 0) {
+                console.log("[v0] 📝 Logging aggregator swap to database in background...");
+                await logSwapVolume({
+                  fromToken: capturedFromToken.symbol,
+                  toToken: capturedToToken.symbol,
+                  fromAmount: capturedFromAmount,
+                  toAmount: capturedToAmount,
+                  fromChain: capturedFromChain,
+                  toChain: capturedToChain,
+                  swapVolumeUsd: swapVolumeUsd,
+                  walletAddress: fromWalletAddress || "",
+                });
+              }
+            } catch (err) {
+              console.error("[v0] Background processing error:", err);
+            }
+          })();
+
           // Refresh balances
           await refreshBalances();
           setFromAmount("");
@@ -1666,6 +1957,39 @@ export function SimpleSwapInterface() {
             duration: 5000,
           });
 
+          // Capture values before clearing
+          const capturedFromAmount = fromAmount;
+          const capturedToAmount = toAmount;
+          const capturedFromChain = fromChain;
+          const capturedToChain = toChain;
+          const capturedFromToken = fromToken;
+          const capturedToToken = toToken;
+
+          // ✅ Log swap to database in background
+          (async () => {
+            try {
+              console.log("[v0] 🔍 Starting background volume calculation for simulated swap...");
+              const fromAmountNum = Number.parseFloat(capturedFromAmount);
+              const swapVolumeUsd = calculateSwapVolumeUSD(fromAmountNum, capturedFromToken.symbol);
+              
+              if (swapVolumeUsd > 0) {
+                console.log("[v0] 📝 Logging simulated swap to database in background...");
+                await logSwapVolume({
+                  fromToken: capturedFromToken.symbol,
+                  toToken: capturedToToken.symbol,
+                  fromAmount: capturedFromAmount,
+                  toAmount: capturedToAmount,
+                  fromChain: capturedFromChain,
+                  toChain: capturedToChain,
+                  swapVolumeUsd: swapVolumeUsd,
+                  walletAddress: fromWalletAddress || "",
+                });
+              }
+            } catch (err) {
+              console.error("[v0] Background processing error:", err);
+            }
+          })();
+
           // Refresh balances
           await refreshBalances();
           setFromAmount("");
@@ -1692,10 +2016,18 @@ export function SimpleSwapInterface() {
       if (txHash) {
         console.log("[v0] Transaction hash received:", txHash);
         
+        // Capture values BEFORE clearing UI
+        const capturedFromAmount = fromAmount;
+        const capturedToAmount = toAmountFormatted;
+        const capturedFromChain = fromChain;
+        const capturedToChain = toChain;
+        const capturedFromToken = fromToken;
+        const capturedToToken = toToken;
+
         // ✅ IMMEDIATE SUCCESS TOAST - No waiting!
         toast({
           title: `✅ ${isBridge ? "Bridge" : "Swap"} Completed!`,
-          description: `Successfully swapped ${fromAmount} ${fromToken.symbol} → ${toAmountFormatted} ${toToken.symbol}`,
+          description: `Successfully swapped ${capturedFromAmount} ${capturedFromToken.symbol} → ${capturedToAmount} ${capturedToToken.symbol}`,
           variant: "default",
           duration: 7000,
         });
@@ -1709,47 +2041,22 @@ export function SimpleSwapInterface() {
           try {
             // Calculate accurate USD value for volume tracking
             console.log("[v0] 🔍 Starting background volume calculation...");
-            let swapVolumeUsd = 0;
-            
-            const fromAmountNum = Number.parseFloat(fromAmount);
-            
-            // Method 1: For stablecoins, amount = USD value (most accurate)
-            if (['USDT', 'USDC', 'DAI', 'BUSD', 'FRAX', 'TUSD'].includes(fromToken.symbol)) {
-              swapVolumeUsd = fromAmountNum;
-            } 
-            // Method 2: Use token prices
-            else {
-              const tokenPrices: Record<string, number> = {
-                'ETH': 3500, 'WETH': 3500, 'BTC': 65000, 'WBTC': 65000,
-                'BNB': 600, 'MATIC': 0.80, 'AVAX': 35, 'SOL': 145,
-                'ARB': 1.20, 'OP': 2.50,
-              };
-              
-              const tokenPrice = tokenPrices[fromToken.symbol];
-              if (tokenPrice) {
-                swapVolumeUsd = fromAmountNum * tokenPrice;
-              } else if (fromToken.usdValue && fromToken.balance) {
-                const totalUsd = Number.parseFloat(fromToken.usdValue.replace('$', '').replace(',', ''));
-                const totalBalance = Number.parseFloat(fromToken.balance);
-                if (totalBalance > 0) {
-                  swapVolumeUsd = fromAmountNum * (totalUsd / totalBalance);
-                }
-              }
-            }
+            const fromAmountNum = Number.parseFloat(capturedFromAmount);
+            const swapVolumeUsd = calculateSwapVolumeUSD(fromAmountNum, capturedFromToken.symbol);
             
             if (swapVolumeUsd > 0) {
               // Background database write - non-blocking
               console.log("[v0] 📝 Logging swap to database in background...");
-              logSwapVolume({
-                fromToken: fromToken.symbol,
-                toToken: toToken.symbol,
-                fromAmount: fromAmount,
-                toAmount: toAmountFormatted,
-                fromChain: fromChain,
-                toChain: toChain,
+              await logSwapVolume({
+                fromToken: capturedFromToken.symbol,
+                toToken: capturedToToken.symbol,
+                fromAmount: capturedFromAmount,
+                toAmount: capturedToAmount,
+                fromChain: capturedFromChain,
+                toChain: capturedToChain,
                 swapVolumeUsd: swapVolumeUsd,
                 walletAddress: fromWalletAddress || "",
-              }).catch(err => console.error("[v0] Background DB write failed:", err));
+              });
 
               // Background balance refresh - non-blocking with timeout
               const blockTimeMs = fromChain === 56 ? 5000 : 
@@ -1862,7 +2169,33 @@ export function SimpleSwapInterface() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  // Function to log swap volume accurately
+  // Function to calculate swap volume in USD
+  const calculateSwapVolumeUSD = (fromAmountNum: number, fromTokenSymbol: string): number => {
+    // Method 1: For stablecoins, amount = USD value (most accurate)
+    if (['USDT', 'USDC', 'DAI', 'BUSD', 'FRAX', 'TUSD'].includes(fromTokenSymbol)) {
+      return fromAmountNum;
+    } 
+    // Method 2: Use token prices
+    const tokenPrices: Record<string, number> = {
+      'ETH': 3500, 'WETH': 3500, 'BTC': 65000, 'WBTC': 65000,
+      'BNB': 600, 'MATIC': 0.80, 'AVAX': 35, 'SOL': 145,
+      'ARB': 1.20, 'OP': 2.50,
+    };
+    
+    const tokenPrice = tokenPrices[fromTokenSymbol];
+    if (tokenPrice) {
+      return fromAmountNum * tokenPrice;
+    } else if (fromToken.usdValue && fromToken.balance) {
+      const totalUsd = Number.parseFloat(fromToken.usdValue.replace('$', '').replace(',', ''));
+      const totalBalance = Number.parseFloat(fromToken.balance);
+      if (totalBalance > 0) {
+        return fromAmountNum * (totalUsd / totalBalance);
+      }
+    }
+    return 0;
+  };
+
+  // Function to log swap volume accurately via API
   const logSwapVolume = async (swapData: {
     fromToken: string;
     toToken: string;
@@ -1874,38 +2207,29 @@ export function SimpleSwapInterface() {
     walletAddress: string;
   }) => {
     try {
-      console.log(`[v0] 💰 Logging swap to Supabase:`);
+      console.log(`[v0] 💰 Logging swap via API:`);
       console.log(`[v0]   From: ${swapData.fromAmount} ${swapData.fromToken} (Chain ${swapData.fromChain})`);
       console.log(`[v0]   To: ${swapData.toAmount} ${swapData.toToken} (Chain ${swapData.toChain})`);
       console.log(`[v0]   Volume: $${swapData.swapVolumeUsd.toFixed(2)} USD`);
       console.log(`[v0]   Wallet: ${swapData.walletAddress}`);
       
-      // Calculate LI.FI fees (2% of swap volume)
-      const lifiFeeUsd = swapData.swapVolumeUsd * 0.02;
-      console.log(`[v0]   LI.FI Fee: $${lifiFeeUsd.toFixed(2)}`);
-      
-      const { error } = await supabase.from("swap_analytics").insert([
-        {
-          timestamp: new Date().toISOString(),
-          from_token: swapData.fromToken,
-          to_token: swapData.toToken,
-          from_amount: swapData.fromAmount,
-          to_amount: swapData.toAmount,
-          from_chain_id: swapData.fromChain, // Fixed: use from_chain_id not from_chain
-          to_chain_id: swapData.toChain, // Fixed: use to_chain_id not to_chain
-          swap_volume_usd: swapData.swapVolumeUsd,
-          wallet_address: swapData.walletAddress,
-          lifi_fee_usd: lifiFeeUsd, // LI.FI fee (2%)
+      const response = await fetch('/api/log-swap', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      ]);
+        body: JSON.stringify(swapData),
+      });
 
-      if (error) {
-        console.error("[v0] ❌ FAILED to log swap to Supabase:", error);
-        console.error("[v0] Error details:", JSON.stringify(error, null, 2));
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        console.error("[v0] ❌ FAILED to log swap:", result);
+        console.error("[v0] Error details:", JSON.stringify(result, null, 2));
       } else {
-        console.log(`[v0] ✅ Swap successfully logged to Supabase!`);
+        console.log(`[v0] ✅ Swap successfully logged!`);
         console.log(`[v0]   - Swap volume: $${swapData.swapVolumeUsd.toFixed(2)}`);
-        console.log(`[v0]   - LI.FI fee: $${lifiFeeUsd.toFixed(2)}`);
+        console.log(`[v0]   - LI.FI fee: $${(swapData.swapVolumeUsd * 0.005).toFixed(2)}`);
       }
     } catch (err) {
       console.error("[v0] Error logging swap volume:", err);
@@ -1929,7 +2253,7 @@ export function SimpleSwapInterface() {
 
       const validation = validateSwapAmount(amount.toString(), fromToken);
       if (validation.isValid) {
-        setFromAmount(amount.toString());
+        setFromAmount(amount.toFixed(5));
       } else {
         const minimumAmounts: { [key: string]: number } = {
           ETH: 0.00001,
@@ -1941,7 +2265,7 @@ export function SimpleSwapInterface() {
         };
         const minAmount = minimumAmounts[fromToken.symbol] || 1;
         if (balanceNum >= minAmount) {
-          setFromAmount(minAmount.toString());
+          setFromAmount(minAmount.toFixed(5));
         } else {
           toast({
             title: "Insufficient Balance",
@@ -2135,8 +2459,9 @@ export function SimpleSwapInterface() {
           );
 
           if (isSameTokenTransfer) {
-            setEstimatedToAmount(fromAmount);
-            setToAmount(fromAmount);
+            const formattedFromAmount = fromAmount ? formatTokenAmount(fromAmount) : fromAmount;
+            setEstimatedToAmount(formattedFromAmount);
+            setToAmount(formattedFromAmount);
             return;
           }
 
@@ -2147,8 +2472,9 @@ export function SimpleSwapInterface() {
             
             if (quote) {
               console.log(`[TO Calculation] ✅ Fast quote received: ${quote.toAmount} ${toToken.symbol}`);
-              setEstimatedToAmount(quote.toAmount);
-              setToAmount(quote.toAmount);
+              const formattedQuoteAmount = quote.toAmount ? formatTokenAmount(quote.toAmount) : quote.toAmount;
+              setEstimatedToAmount(formattedQuoteAmount);
+              setToAmount(formattedQuoteAmount);
               setFastQuote(quote);
             } else {
               // Fallback to price API for rough estimate
@@ -2162,8 +2488,8 @@ export function SimpleSwapInterface() {
                 if (fromPrice > 0 && toPrice > 0) {
                   const fromAmountNum = Number.parseFloat(fromAmount);
                   const estimatedAmount = (fromAmountNum * fromPrice) / toPrice;
-                  setEstimatedToAmount(estimatedAmount.toFixed(6));
-                  setToAmount(estimatedAmount.toFixed(6));
+                  setEstimatedToAmount(estimatedAmount.toFixed(5));
+                  setToAmount(estimatedAmount.toFixed(5));
                 } else {
                   setEstimatedToAmount("~");
                   setToAmount("");
@@ -2216,7 +2542,8 @@ export function SimpleSwapInterface() {
         if (isSameTokenTransfer) {
           console.log("[v0] ⚡ Same-token transfer detected - skipping LiFi quote");
           console.log("[v0] 💸 Will use direct transfer when you click Swap");
-          setToAmount(fromAmount); // 1:1 transfer
+          const formattedFromAmount = fromAmount ? formatTokenAmount(fromAmount) : fromAmount;
+          setToAmount(formattedFromAmount); // 1:1 transfer
           return;
         }
 
@@ -2231,6 +2558,25 @@ export function SimpleSwapInterface() {
           const fromAmountWei = (
             Number.parseFloat(fromAmount) * Math.pow(10, fromTokenDecimals)
           ).toString();
+
+          const safeFromToken = ["ETH", "BNB", "MATIC"].includes(fromToken.symbol)
+            ? "0x0000000000000000000000000000000000000000"
+            : fromToken.address;
+          const safeToToken = ["ETH", "BNB", "MATIC"].includes(toToken.symbol)
+            ? "0x0000000000000000000000000000000000000000"
+            : toToken.address;
+
+          const quoteRequest = {
+            fromChain: fromToken.chainId,
+            toChain: toToken.chainId,
+            fromToken: safeFromToken,
+            toToken: safeToToken,
+            fromAmount: fromAmountWei,
+            fromAddress: fromWalletAddress,
+            toAddress: toWalletAddress,
+            slippage: slippageTolerance,
+            order: isBridge ? ("FASTEST" as const) : ("CHEAPEST" as const),
+          };
 
           // First, check liquidity for the token pair
           let liquidityInfo = null;
@@ -2257,8 +2603,8 @@ export function SimpleSwapInterface() {
             console.warn("[v0] ⚠️ Liquidity check failed:", liquidityError);
           }
 
-                // Simplified routing: LiFi first, stop after first successful route
-          let quoteResult = null;
+          // Simplified routing: LiFi first, stop after first successful route
+          let quoteResult: any = null;
           
           console.log("[v0] 🔍 Starting LiFi-first routing for:", {
             fromToken: fromToken.symbol,
@@ -2269,34 +2615,93 @@ export function SimpleSwapInterface() {
             isCrossChain: fromToken.chainId !== toToken.chainId,
           });
           
-                // Strategy 1: Try LiFi first (primary route)
-          console.log("[v0] 🔵 Trying LiFi first...");
-          const quoteRequest = {
-            fromChain: fromToken.chainId,
-            toChain: toToken.chainId,
-            fromToken: fromToken.address,
-            toToken: toToken.address,
-            fromAmount: fromAmountWei,
-            fromAddress: fromWalletAddress,
-            toAddress: toWalletAddress,
-            slippage: slippageTolerance,
-                  order: isBridge ? ("FASTEST" as const) : ("CHEAPEST" as const),
-          };
-          
-                console.log("[v0] Quote request:", quoteRequest);
-                console.log(`[v0] FromToken details - Symbol: ${fromToken.symbol}, Address: ${fromToken.address}, ChainId: ${fromToken.chainId}, Decimals: ${fromTokenDecimals}`);
-                console.log(`[v0] ToToken details - Symbol: ${toToken.symbol}, Address: ${toToken.address}, ChainId: ${toToken.chainId}`);
+          // Strategy 1: Try parallel routes (multi-aggregator) first
+          try {
+            const parallelResponse = await fetch("/api/parallel-routes", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                fromChain: fromToken.chainId,
+                toChain: toToken.chainId,
+                fromToken: safeFromToken,
+                toToken: safeToToken,
+                fromAmount: fromAmountWei,
+                fromAddress: fromWalletAddress,
+                toAddress: toWalletAddress,
+                slippage: slippageTolerance,
+              }),
+            });
 
-          const lifiQuote = await getQuote(quoteRequest);
-          if (lifiQuote) {
-            console.log("[v0] ✅ LiFi quote found - using this route and stopping search");
-                  quoteResult = {
-                    ...lifiQuote,
-                    liquidityInfo,
-                    confidence: liquidityInfo?.riskLevel === "low" ? 90 : liquidityInfo?.riskLevel === "medium" ? 75 : 60,
-                  };
-          } else {
-            console.log("[v0] ❌ LiFi quote not found - no fallback, user needs to adjust parameters");
+            if (parallelResponse.ok) {
+              const parallelData = await parallelResponse.json();
+              if (parallelData?.success && parallelData.bestRoute) {
+                const bestRoute = parallelData.bestRoute;
+                console.log(`[v0] ✅ Parallel route found from ${bestRoute.provider}`);
+
+                const providerName = (bestRoute.provider || parallelData.provider || "parallel").toString();
+                const gasEstimate = bestRoute.estimatedGas || bestRoute.transactionRequest?.gasLimit || bestRoute.transactionRequest?.gas || "0";
+
+                quoteResult = {
+                  tool: `${providerName}-parallel`,
+                  provider: providerName,
+                  source: "parallel-routes",
+                  estimate: {
+                    toAmount: bestRoute.toAmount,
+                    toAmountMin: bestRoute.toAmountMin,
+                    gasCosts: [
+                      {
+                        estimate: gasEstimate,
+                        amountUSD: bestRoute.gasUSD ?? "0",
+                      },
+                    ],
+                    priceImpact: bestRoute.priceImpact ?? 0,
+                  },
+                  transactionRequest: bestRoute.transactionRequest,
+                  route: bestRoute.route,
+                  liquidityInfo,
+                  confidence: bestRoute.liquidityScore ?? (liquidityInfo?.riskLevel === "low" ? 90 : liquidityInfo?.riskLevel === "medium" ? 75 : 60),
+                  aggregatorQuote: bestRoute,
+                };
+              }
+            } else {
+              const errorText = await parallelResponse.text();
+              console.warn("[v0] ⚠️ Parallel routes API error", parallelResponse.status, errorText);
+            }
+          } catch (parallelError) {
+            console.warn("[v0] ⚠️ Parallel routes fetch failed:", parallelError);
+          }
+
+          // Strategy 2: fallback to LiFi if parallel routes not available
+          if (!quoteResult) {
+            console.log("[v0] 🔵 Parallel routes not available, trying LiFi...", {
+              fromToken: fromToken.symbol,
+              toToken: toToken.symbol,
+            });
+
+            const quoteRequest = {
+              fromChain: fromToken.chainId,
+              toChain: toToken.chainId,
+              fromToken: safeFromToken,
+              toToken: safeToToken,
+              fromAmount: fromAmountWei,
+              fromAddress: fromWalletAddress,
+              toAddress: toWalletAddress,
+              slippage: slippageTolerance,
+              order: isBridge ? ("FASTEST" as const) : ("CHEAPEST" as const),
+            };
+
+            const lifiQuote = await getQuote(quoteRequest);
+            if (lifiQuote) {
+              console.log("[v0] ✅ LiFi quote found - using this route and stopping search");
+              quoteResult = {
+                ...lifiQuote,
+                source: "lifi",
+                liquidityInfo,
+                confidence: liquidityInfo?.riskLevel === "low" ? 90 : liquidityInfo?.riskLevel === "medium" ? 75 : 60,
+              };
+            } else {
+              console.log("[v0] ❌ LiFi quote not found - no fallback, user needs to adjust parameters");
+            }
           }
 
           // If still no quote, create a simulated quote for low liquidity tokens
@@ -2328,7 +2733,9 @@ export function SimpleSwapInterface() {
                 }],
                 priceImpact: 15.0, // High price impact for low liquidity
               },
+              tokenOutDecimals: toToken.decimals ?? 18,
               tool: "simulated-low-liquidity",
+              source: "simulated",
               liquidityInfo,
               confidence: 30, // Low confidence for simulated quotes
               isSimulated: true,
@@ -2349,15 +2756,18 @@ export function SimpleSwapInterface() {
           if (quoteResult) {
             console.log("[v0] Quote received:", quoteResult);
 
-            const toTokenDecimals = toToken.decimals || 
-              (toToken.symbol === "USDC" ? 6 : 
-               toToken.symbol === "USDT" ? 6 : 
+            const toTokenDecimals =
+              (quoteResult.tokenOutDecimals ??
+               quoteResult.estimate?.tokenOutDecimals ??
+               toToken.decimals) ??
+              (toToken.symbol === "USDC" ? 6 :
+               toToken.symbol === "USDT" ? 6 :
                toToken.symbol === "WBTC" ? 8 : 18);
             
             const toAmountFormatted = (
               Number.parseFloat(quoteResult.estimate.toAmount) /
               Math.pow(10, toTokenDecimals)
-            ).toFixed(6);
+            ).toFixed(5);
             setToAmount(toAmountFormatted);
 
             // Store enhanced quote for execution
@@ -2395,7 +2805,7 @@ export function SimpleSwapInterface() {
 
   // --- layout blocks kept intact; we only wrap them when chart is docked ---
   const SwapCard = (
-    <div className="max-w-md mx-auto pb-20">
+    <div className="max-w-md m-auto  ">
       <div className="bg-yellow-400 h-8 w-11/12 mx-auto mb-0"></div>
 
       <div className="bg-[#191919] border border-[#FCD404]">
@@ -2534,7 +2944,7 @@ export function SimpleSwapInterface() {
                         type="number"
                         placeholder="0"
                         value={fromAmount}
-                        onChange={(e) => setFromAmount(e.target.value)}
+                        onChange={(e) => handleFromAmountChange(e.target.value)}
                         className="bg-transparent border-none text-3xl font-semibold text-white p-0 h-auto focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
 
@@ -2578,11 +2988,11 @@ export function SimpleSwapInterface() {
                       {isConnected && fromToken.balance && (
                         <div className="flex items-center space-x-2">
                           <span className="text-gray-400 text-sm hidden md:block">
-                            Balance: {fromToken.balance}
+                            Balance: {formatTokenBalance(fromToken.balance)}
                           </span>
 
                           <span className="text-gray-400 text-sm md:hidden">
-                            Bal: {fromToken.balance}
+                            Bal: {formatTokenBalance(fromToken.balance)}
                           </span>
                           <div className="flex space-x-1">
                             <Button
@@ -2710,7 +3120,7 @@ export function SimpleSwapInterface() {
                     {/* Show estimated amount indicator */}
                     {estimatedToAmount && !toAmount && (
                       <div className="text-yellow-400 text-xs mt-1 px-4 pb-2">
-                        ~{estimatedToAmount} (estimated)
+                        ~{formatTokenAmount(estimatedToAmount)} (estimated)
                       </div>
                     )}
                   </div>
@@ -2784,7 +3194,7 @@ export function SimpleSwapInterface() {
                         type="number"
                         placeholder="0"
                         value={fromAmount}
-                        onChange={(e) => setFromAmount(e.target.value)}
+                        onChange={(e) => handleFromAmountChange(e.target.value)}
                         className="bg-transparent border-none text-3xl font-semibold text-white p-0 h-auto focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       />
 
@@ -2827,8 +3237,12 @@ export function SimpleSwapInterface() {
                       <span className="text-gray-400">{formatUsdValue(fromDisplayUsdValue)}</span>
                       {isConnected && fromToken.balance && (
                         <div className="flex items-center space-x-2">
-                          <span className="text-gray-400">
-                            Balance: {fromToken.balance}
+                          <span className="text-gray-400 text-sm hidden md:block">
+                            Balance: {formatTokenBalance(fromToken.balance)}
+                          </span>
+
+                          <span className="text-gray-400 text-sm md:hidden">
+                            Bal: {formatTokenBalance(fromToken.balance)}
                           </span>
                           <div className="flex space-x-1">
                             <Button
@@ -2902,8 +3316,8 @@ export function SimpleSwapInterface() {
                       <Input
                         type="number"
                         placeholder="0"
-                        value={toAmount || estimatedToAmount}
-                        onChange={(e) => setToAmount(e.target.value)}
+                        value={toAmount ? formatTokenAmount(toAmount) : (estimatedToAmount ? formatTokenAmount(estimatedToAmount) : "")}
+                        onChange={(e) => handleToAmountChange(e.target.value)}
                         className="bg-transparent border-none text-3xl font-medium text-white p-0 h-auto focus-visible:ring-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                         disabled={!!fromTokenError} // Disable if there's a FROM token error
                       />

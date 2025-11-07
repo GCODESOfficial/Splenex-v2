@@ -28,14 +28,14 @@ export default function ComingSoon() {
 
 
   return (
-    <section className="flex items-center justify-center min-h-screen mt-4 md:mt-14">
+    <section className="flex items-center justify-center h-full mt-4 md:mt-0">
       {/* Card */}
       <div className="relative bg-[#1c1e1d] text-white w-11/12 md:w-[400px] border border-[#FFD600]">
         {/* Top yellow bar */}
         <div className="absolute -top-4 left-0 right-0 h-4 bg-[#FFD600]" />
 
         {/* Main content */}
-        <div className="flex flex-col items-center justify-center py-26 px-6 text-center space-y-4">
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center space-y-4">
           {/* Hourglass Icon */}
           <div className="mb-6">
             <video autoPlay loop muted className="w-50 h-50">

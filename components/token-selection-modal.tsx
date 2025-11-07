@@ -80,11 +80,6 @@ const CHAINS: Chain[] = [
   },
   // Layer 2s and sidechains
   {
-    id: 42170,
-    name: "Arbitrum Nova",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/arbitrum/info/logo.png",
-  },
-  {
     id: 324,
     name: "zkSync Era",
     icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/zksync/info/logo.png",
@@ -110,11 +105,6 @@ const CHAINS: Chain[] = [
     icon: "https://icons.llamao.fi/icons/chains/rsz_mantle.jpg",
   },
   {
-    id: 169,
-    name: "Manta Pacific",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_manta.jpg",
-  },
-  {
     id: 81457,
     name: "Blast",
     icon: "https://icons.llamao.fi/icons/chains/rsz_blast.jpg",
@@ -129,17 +119,7 @@ const CHAINS: Chain[] = [
     name: "opBNB",
     icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/smartchain/info/logo.png",
   },
-  {
-    id: 7777777,
-    name: "Zora",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_zora.jpg",
-  },
-  // Other EVM chains
-  {
-    id: 100,
-    name: "Gnosis",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/xdai/info/logo.png",
-  },
+  // Other EVM chains (removed chains that don't return tokens: Arbitrum Nova, Songbird, ThunderCore, Zora, HECO, BitTorrent, Harmony, Velas, Syscoin, Theta, Telos, Wanchain, TomoChain, Elastos, IoTeX, Evmos, Kava, Meter, Gnosis, KCC, OKExChain, Oasis Emerald, SmartBCH, Solana, Cosmos, Manta Pacific)
   {
     id: 1285,
     name: "Moonriver",
@@ -171,84 +151,9 @@ const CHAINS: Chain[] = [
     icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/metis/info/logo.png",
   },
   {
-    id: 321,
-    name: "KCC",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/kcc/info/logo.png",
-  },
-  {
-    id: 66,
-    name: "OKExChain",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/okexchain/info/logo.png",
-  },
-  {
-    id: 128,
-    name: "HECO",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/heco/info/logo.png",
-  },
-  {
     id: 122,
     name: "Fuse",
     icon: "https://icons.llamao.fi/icons/chains/rsz_fuse.jpg",
-  },
-  {
-    id: 199,
-    name: "BitTorrent",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_bittorrent.jpg",
-  },
-  {
-    id: 1666600000,
-    name: "Harmony",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/harmony/info/logo.png",
-  },
-  {
-    id: 106,
-    name: "Velas",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_velas.jpg",
-  },
-  {
-    id: 57,
-    name: "Syscoin",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_syscoin.jpg",
-  },
-  {
-    id: 361,
-    name: "Theta",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_theta.jpg",
-  },
-  {
-    id: 40,
-    name: "Telos",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_telos.jpg",
-  },
-  {
-    id: 88,
-    name: "TomoChain",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_tomochain.jpg",
-  },
-  {
-    id: 888,
-    name: "Wanchain",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_wanchain.jpg",
-  },
-  {
-    id: 20,
-    name: "Elastos",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_elastos.jpg",
-  },
-  {
-    id: 4689,
-    name: "IoTeX",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/iotex/info/logo.png",
-  },
-  {
-    id: 9001,
-    name: "Evmos",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/evmos/info/logo.png",
-  },
-  {
-    id: 2222,
-    name: "Kava",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/kava/info/logo.png",
   },
   {
     id: 8217,
@@ -256,49 +161,13 @@ const CHAINS: Chain[] = [
     icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/klaytn/info/logo.png",
   },
   {
-    id: 82,
-    name: "Meter",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_meter.jpg",
-  },
-  {
-    id: 42262,
-    name: "Oasis Emerald",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/oasis/info/logo.png",
-  },
-  {
     id: 2020,
     name: "Ronin",
     icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ronin/info/logo.png",
   },
-  {
-    id: 10000,
-    name: "SmartBCH",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_smartbch.jpg",
-  },
-  {
-    id: 19,
-    name: "Songbird",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_songbird.jpg",
-  },
-  {
-    id: 108,
-    name: "ThunderCore",
-    icon: "https://icons.llamao.fi/icons/chains/rsz_thundercore.jpg",
-  },
-  // Non-EVM chains
-  {
-    id: 99998,
-    name: "Solana",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/solana/info/logo.png",
-  },
-  {
-    id: 99999,
-    name: "Cosmos",
-    icon: "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/cosmos/info/logo.png",
-  },
 ]
 
-// Use popular tokens with real CoinGecko logos (imported from lib)
+// Use popular tokens (imported from lib)
 
 interface TokenSelectionModalProps {
   isOpen: boolean
@@ -319,10 +188,10 @@ export function TokenSelectionModal({
   const [chainSearchQuery, setChainSearchQuery] = useState("")
   const [selectedChain, setSelectedChain] = useState<number | null>(null)
   const [lifiTokens, setLifiTokens] = useState<Token[]>([])
-  const [coinGeckoTokens, setCoinGeckoTokens] = useState<Token[]>([])
+  const [searchedTokens, setSearchedTokens] = useState<Token[]>([])
   const [allTokens, setAllTokens] = useState<Token[]>([])
   const [isLoadingTokens, setIsLoadingTokens] = useState(false)
-  const [isLoadingCoinGecko, setIsLoadingCoinGecko] = useState(false)
+  const [isLoadingTokenSearch, setIsLoadingTokenSearch] = useState(false)
   const [isLoadingAllTokens, setIsLoadingAllTokens] = useState(false)
   const [showChains, setShowChains] = useState(false);
   const [customTokenAddress, setCustomTokenAddress] = useState("")
@@ -339,7 +208,7 @@ export function TokenSelectionModal({
 
   console.log(`[TokenSelectionModal] 💼 Using ${walletContext} wallet balances:`, tokenBalances.length, "tokens")
 
-  // Function to fetch token metadata by contract address
+  // Function to fetch token metadata by contract address (OPTIMIZED)
   const fetchTokenByAddress = async (address: string, chainId: number = 1) => {
     if (!address || address.length !== 42 || !address.startsWith('0x')) {
       return null
@@ -347,55 +216,57 @@ export function TokenSelectionModal({
 
     setIsLoadingCustomToken(true)
     try {
-      // Try to get token metadata from multiple sources
-      const responses = await Promise.allSettled([
-        // Try Moralis API first
-        fetch(`/api/token-metadata?address=${address}&chainId=${chainId}`),
-        // Try CoinGecko API as fallback
-        fetch(`https://api.coingecko.com/api/v3/coins/ethereum/contract/${address}`)
-      ])
+      console.log(`[TokenSelectionModal] ⚡ Fast metadata lookup for ${address} on chain ${chainId}`);
 
-      // Process Moralis response
-      if (responses[0].status === 'fulfilled' && responses[0].value.ok) {
-        const moralisData = await responses[0].value.json()
-        if (moralisData.result) {
+      // Use optimized fast metadata API (prioritizes DexScreener)
+      const response = await fetch(`/api/tokens?address=${address}&chainId=${chainId}`)
+      
+      if (response.ok) {
+        const result = await response.json()
+        if (result.success && result.data) {
           const token: Token = {
-            symbol: moralisData.result.symbol || 'UNKNOWN',
-            name: moralisData.result.name || 'Unknown Token',
+            symbol: result.data.symbol?.toUpperCase() || 'UNKNOWN',
+            name: result.data.name || 'Unknown Token',
             address: address.toLowerCase(),
             chainId: chainId,
             chainName: getChainName(chainId),
-            decimals: moralisData.result.decimals || 18,
-            logoURI: moralisData.result.logo || undefined,
-            source: 'moralis'
+            decimals: result.data.decimals || 18,
+            logoURI: result.data.logoURI || undefined,
+            source: 'fast-metadata'
           }
+          console.log(`[TokenSelectionModal] ✅ Found token: ${token.symbol} (${token.name})`)
           setCustomToken(token)
           setIsLoadingCustomToken(false)
           return token
         }
       }
 
-      // Process CoinGecko response
-      if (responses[1].status === 'fulfilled' && responses[1].value.ok) {
-        const cgData = await responses[1].value.json()
-        if (cgData.id) {
-          const token: Token = {
-            symbol: cgData.symbol?.toUpperCase() || 'UNKNOWN',
-            name: cgData.name || 'Unknown Token',
-            address: address.toLowerCase(),
-            chainId: chainId,
-            chainName: getChainName(chainId),
-            decimals: 18, // Default to 18
-            logoURI: cgData.image?.large || undefined,
-            source: 'coingecko'
+      // Fallback: Try Moralis if fast lookup fails
+      try {
+        const moralisResponse = await fetch(`/api/token-metadata?address=${address}&chainId=${chainId}`)
+        if (moralisResponse.ok) {
+          const moralisData = await moralisResponse.json()
+          if (moralisData.result) {
+            const token: Token = {
+              symbol: moralisData.result.symbol || 'UNKNOWN',
+              name: moralisData.result.name || 'Unknown Token',
+              address: address.toLowerCase(),
+              chainId: chainId,
+              chainName: getChainName(chainId),
+              decimals: moralisData.result.decimals || 18,
+              logoURI: moralisData.result.logo || undefined,
+              source: 'moralis'
+            }
+            setCustomToken(token)
+            setIsLoadingCustomToken(false)
+            return token
           }
-          setCustomToken(token)
-          setIsLoadingCustomToken(false)
-          return token
         }
+      } catch (moralisError) {
+        console.warn('[TokenSelectionModal] Moralis fallback failed:', moralisError)
       }
 
-      // If no metadata found, create a basic token entry
+      // Last resort: Create basic token entry
       const token: Token = {
         symbol: 'UNKNOWN',
         name: 'Unknown Token',
@@ -431,6 +302,70 @@ export function TokenSelectionModal({
     return chainMap[chainId] || `Chain ${chainId}`
   }
 
+  // Helper function to get logo URI for tokens (defined outside useMemo for reuse)
+  const getLogoURIForToken = (symbol: string, address: string, chainId: number): string | undefined => {
+    const addressLower = address?.toLowerCase() || '';
+    const symbolUpper = symbol?.toUpperCase() || '';
+    const isNativeToken = !addressLower || addressLower === "0x0000000000000000000000000000000000000000" || addressLower === "native";
+
+    // Handle native tokens (ETH, BNB, MATIC, AVAX, etc.)
+    if (isNativeToken) {
+      const nativeTokenIcons: { [key: string]: string } = {
+        "ETH": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png",
+        "BNB": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/bnb.png",
+        "MATIC": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/matic.png",
+        "AVAX": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/avax.png",
+        "FTM": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/ftm.png",
+        "OP": "https://assets.coingecko.com/coins/images/25244/small/Optimism.png",
+        "ARB": "https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg",
+        "BASE": "https://assets.coingecko.com/coins/images/27509/small/base.png",
+      };
+      
+      if (symbolUpper && nativeTokenIcons[symbolUpper]) {
+        return nativeTokenIcons[symbolUpper];
+      }
+    }
+
+    // Try cryptocurrency-icons first (most reliable)
+    const cryptoIconMap: { [key: string]: string } = {
+      "ETH": "eth", "WETH": "eth", "BTC": "btc", "WBTC": "btc", 
+      "USDT": "usdt", "USDC": "usdc", "DAI": "dai", "BUSD": "busd",
+      "LINK": "link", "UNI": "uni", "AAVE": "aave", "MATIC": "matic",
+      "BNB": "bnb", "AVAX": "avax", "SOL": "sol", "DOT": "dot", "ATOM": "atom",
+      "PEPE": "pepe", "SHIB": "shib", "FLOKI": "floki", "BONK": "bonk",
+    };
+    
+    const cryptoIcon = cryptoIconMap[symbolUpper];
+    if (cryptoIcon) {
+      return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${cryptoIcon}.png`;
+    }
+    
+    // Try TrustWallet assets
+    if (addressLower && addressLower !== "0x0000000000000000000000000000000000000000" && addressLower.length >= 42) {
+      const chainNameMap: { [key: number]: string } = {
+        1: "ethereum",
+        56: "smartchain",
+        137: "polygon",
+        42161: "arbitrum",
+        10: "optimism",
+        8453: "base",
+        43114: "avalanchec",
+        250: "fantom",
+      };
+      const twChain = chainNameMap[chainId];
+      if (twChain) {
+        return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${twChain}/assets/${addressLower}/logo.png`;
+      }
+    }
+    
+    // Try DeFi Llama
+    if (addressLower && addressLower !== "0x0000000000000000000000000000000000000000" && addressLower.length >= 42) {
+      return `https://icons.llamao.fi/icons/tokens/${chainId}/${addressLower}`;
+    }
+    
+    return undefined;
+  };
+
   // Load all tokens from comprehensive API when modal opens
   useEffect(() => {
     const loadAllTokens = async () => {
@@ -449,24 +384,13 @@ export function TokenSelectionModal({
           if (data.success && data.data) {
             console.log(`[Token Modal] ✅ Loaded ${data.data.length} tokens from all chains`);
             
-            // Debug: Check for Solana and Cosmos tokens specifically
-            const solanaTokens = data.data.filter((token: any) => 
-              token.chains?.some((chain: any) => chain.chainId === 99998)
-            );
-            const cosmosTokens = data.data.filter((token: any) => 
-              token.chains?.some((chain: any) => chain.chainId === 99999)
-            );
-            
-            console.log("[Token Modal] 🔍 Solana tokens found:", solanaTokens.length);
-            console.log("[Token Modal] 🔍 Cosmos tokens found:", cosmosTokens.length);
-            
             // Convert to Token format and filter by wallet balances
             const tokensWithBalances = data.data
               .map((token: any) => {
                 // Find if token exists in wallet balances
                 const walletToken = tokenBalances.find(walletToken => 
                   walletToken.symbol === token.symbol && 
-                  token.chains.some((chain: any) => chain.chainId === walletToken.chainId)
+                  token.chains?.some((chain: any) => chain.chainId === walletToken.chainId)
                 );
 
                 if (walletToken) {
@@ -485,8 +409,16 @@ export function TokenSelectionModal({
                     source: "wallet",
                   };
                 } else {
-                  // Token not in wallet - create separate entries for each chain
-                  return token.chains.map((chain: any) => ({
+                  // Token not in wallet - create separate entries for each chain, but ONLY if unique
+                  const uniqueChains = new Map<string, any>();
+                  token.chains?.forEach((chain: any) => {
+                    const chainKey = `${chain.address.toLowerCase()}-${chain.chainId}`;
+                    if (!uniqueChains.has(chainKey)) {
+                      uniqueChains.set(chainKey, chain);
+                    }
+                  });
+                  
+                  return Array.from(uniqueChains.values()).map((chain: any) => ({
                     id: `${token.id}-${chain.chainId}`,
                     symbol: token.symbol,
                     name: token.name,
@@ -495,10 +427,10 @@ export function TokenSelectionModal({
                     chainName: chain.chainName,
                     balance: "0",
                     usdValue: "$0.00",
-                    logoURI: token.logoURI,
+                    logoURI: token.logoURI || getLogoURIForToken(token.symbol, chain.address, chain.chainId),
                     decimals: chain.decimals || 18,
                     source: "api",
-                    availableChains: token.chains.length,
+                    availableChains: token.chains?.length || 0,
                     marketCapRank: token.marketCapRank,
                     price: token.price
                   }));
@@ -518,13 +450,6 @@ export function TokenSelectionModal({
 
             setAllTokens(tokensWithBalances);
             console.log(`[Token Modal] 📊 Processed ${tokensWithBalances.length} tokens for display`);
-            
-            // Log token distribution by chain
-            const chainDistribution = tokensWithBalances.reduce((acc: any, token: any) => {
-              acc[token.chainName] = (acc[token.chainName] || 0) + 1;
-              return acc;
-            }, {});
-            console.log("[Token Modal] 📈 Token distribution by chain:", chainDistribution);
           }
         }
       } catch (error) {
@@ -538,23 +463,46 @@ export function TokenSelectionModal({
     loadAllTokens();
   }, [isOpen, tokenBalances]);
 
-  // Real-time CoinGecko token search - finds ANY token instantly!
+  // Real-time token search using reliable multi-source service (OPTIMIZED)
   useEffect(() => {
-    const searchCoinGeckoTokens = async () => {
+    const searchTokens = async () => {
       // Only search if user is actively typing (2+ characters)
       if (!isOpen || !searchQuery || searchQuery.length < 2) {
-        setCoinGeckoTokens([]);
+        setSearchedTokens([]);
         return;
       }
       
-      setIsLoadingCoinGecko(true);
+      setIsLoadingTokenSearch(true);
       try {
-        console.log(`[Token Search] 🔍 Searching CoinGecko for: "${searchQuery}"`);
+        const trimmedQuery = searchQuery.trim();
         
-        // Use server-side API to avoid rate limits
-        const searchResponse = await fetch(
-          `/api/search-tokens?q=${encodeURIComponent(searchQuery)}`
-        );
+        // Check if it's a contract address (optimized path)
+        const isContractAddr = /^0x[a-fA-F0-9]{40}$/.test(trimmedQuery);
+        
+        if (isContractAddr) {
+          console.log(`[Token Search] ⚡ Contract address detected: ${trimmedQuery}`);
+          
+          // For contract addresses, use fast metadata lookup and add to list
+          const chainIdToUse = selectedChain || 1;
+          const token = await fetchTokenByAddress(trimmedQuery, chainIdToUse);
+          
+          if (token) {
+            // Token already added to searchedTokens in fetchTokenByAddress
+            console.log(`[Token Search] ✅ Contract address token loaded: ${token.symbol}`);
+            setIsLoadingTokenSearch(false);
+            return;
+          }
+        } else {
+          console.log(`[Token Search] 🔍 Searching for: "${trimmedQuery}"${selectedChain ? ` on chain ${selectedChain}` : ""}`);
+        }
+        
+        // Use new reliable token search API (replaces CoinGecko)
+        // The API automatically detects contract addresses and uses DexScreener
+        const searchUrl = selectedChain 
+          ? `/api/search-tokens?q=${encodeURIComponent(trimmedQuery)}&chainId=${selectedChain}`
+          : `/api/search-tokens?q=${encodeURIComponent(trimmedQuery)}`;
+        
+        const searchResponse = await fetch(searchUrl);
         
         if (!searchResponse.ok) {
           throw new Error('Token search failed');
@@ -564,61 +512,98 @@ export function TokenSelectionModal({
         
         // Server API returns formatted tokens directly
         if (searchData.success && searchData.data) {
-          console.log(`[Token Search] ✅ Found ${searchData.data.length} tokens for "${searchQuery}"`);
-          setCoinGeckoTokens(searchData.data);
+          console.log(`[Token Search] ✅ Found ${searchData.data.length} tokens for "${trimmedQuery}"${searchData.source ? ` (via ${searchData.source})` : ""}`);
+          setSearchedTokens(searchData.data);
         } else {
-          console.log(`[Token Search] ⚠️ No results for "${searchQuery}"`);
-          setCoinGeckoTokens([]);
+          console.log(`[Token Search] ⚠️ No results for "${trimmedQuery}"`);
+          setSearchedTokens([]);
         }
         
       } catch (error) {
         console.error("[Token Search] ❌ Search failed:", error);
-        setCoinGeckoTokens([]);
+        setSearchedTokens([]);
       } finally {
-        setIsLoadingCoinGecko(false);
+        setIsLoadingTokenSearch(false);
       }
     };
 
     // Debounce search to avoid too many API calls
+    // Much faster for contract addresses (instant), faster for text queries
+    const trimmedQuery = searchQuery.trim();
+    const isContractAddr = /^0x[a-fA-F0-9]{40}$/.test(trimmedQuery);
+    const debounceTime = isContractAddr ? 100 : 300; // Much faster: 100ms for addresses, 300ms for text
+    
     const debounceTimer = setTimeout(() => {
-      searchCoinGeckoTokens();
-    }, 800); // 800ms debounce
+      searchTokens();
+    }, debounceTime);
 
     return () => clearTimeout(debounceTimer);
-  }, [isOpen, searchQuery]);
+  }, [isOpen, searchQuery, selectedChain]);
 
   useEffect(() => {
-    const loadLiFiTokens = async () => {
+    const loadChainTokens = async () => {
       if (selectedChain) {
         setIsLoadingTokens(true)
         try {
-          const tokens = await getSupportedTokens(selectedChain)
-          console.log(`[v0] LiFi tokens for chain ${selectedChain}:`, tokens)
+          // Load tokens from reliable token service (includes DexScreener)
+          console.log(`[Token Modal] 🔄 Loading tokens for chain ${selectedChain}...`)
+          
+          const response = await fetch(`/api/tokens?chainId=${selectedChain}`)
+          if (response.ok) {
+            const data = await response.json()
+            if (data.success && data.tokens) {
+              const formattedTokens: Token[] = data.tokens.map((token: any) => ({
+                symbol: token.symbol,
+                name: token.name,
+                address: token.address,
+                chainId: token.chainId,
+                chainName: token.chainName || CHAINS.find((c) => c.id === token.chainId)?.name || `Chain ${token.chainId}`,
+                decimals: token.decimals || 18,
+                logoURI: token.logoURI,
+                source: "chain-tokens",
+              }))
+              
+              console.log(`[Token Modal] ✅ Loaded ${formattedTokens.length} tokens for chain ${selectedChain}`)
+              setAllTokens(formattedTokens)
+            }
+          }
 
-          // Convert LiFi token format to our Token interface
-          const formattedTokens: Token[] = tokens.map((token: any) => ({
-            symbol: token.symbol,
-            name: token.name,
-            address: token.address,
-            chainId: token.chainId,
-            chainName: CHAINS.find((c) => c.id === token.chainId)?.name || `Chain ${token.chainId}`,
-            decimals: token.decimals,
-            logoURI: token.logoURI,
-          }))
+          // Also try LiFi tokens as fallback
+          try {
+            const tokens = await getSupportedTokens(selectedChain)
+            console.log(`[Token Modal] LiFi tokens for chain ${selectedChain}:`, tokens.length)
 
-          setLifiTokens(formattedTokens)
+            // Convert LiFi token format to our Token interface
+            const formattedTokens: Token[] = tokens.map((token: any) => ({
+              symbol: token.symbol,
+              name: token.name,
+              address: token.address,
+              chainId: token.chainId,
+              chainName: CHAINS.find((c) => c.id === token.chainId)?.name || `Chain ${token.chainId}`,
+              decimals: token.decimals,
+              logoURI: token.logoURI,
+              source: "lifi",
+            }))
+
+            setLifiTokens(formattedTokens)
+          } catch (lifiError) {
+            console.warn(`[Token Modal] ⚠️ LiFi tokens failed for chain ${selectedChain}:`, lifiError)
+            setLifiTokens([])
+          }
         } catch (error) {
-          console.error("[v0] Failed to load LiFi tokens:", error)
+          console.error(`[Token Modal] ❌ Error loading tokens for chain ${selectedChain}:`, error)
+          setAllTokens([])
           setLifiTokens([])
         } finally {
           setIsLoadingTokens(false)
         }
       } else {
         setLifiTokens([])
+        setAllTokens([])
       }
     }
 
-    loadLiFiTokens()
+    loadChainTokens()
   }, [selectedChain, getSupportedTokens])
 
   const filteredChains = CHAINS.filter((chain) => chain.name.toLowerCase().includes(chainSearchQuery.toLowerCase()))
@@ -654,11 +639,75 @@ export function TokenSelectionModal({
 
   // Enhanced token deduplication and validation system with Rabby-style detection
   const allTokensCombined = useMemo(() => {
+    // Helper function to get logo URI for tokens (defined inside useMemo)
+    const getLogoURIForToken = (symbol: string, address: string, chainId: number): string | undefined => {
+      const addressLower = address?.toLowerCase() || '';
+      const symbolUpper = symbol?.toUpperCase() || '';
+      const isNativeToken = !addressLower || addressLower === "0x0000000000000000000000000000000000000000" || addressLower === "native";
+
+      // Handle native tokens (ETH, BNB, MATIC, AVAX, etc.)
+      if (isNativeToken) {
+        const nativeTokenIcons: { [key: string]: string } = {
+          "ETH": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/eth.png",
+          "BNB": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/bnb.png",
+          "MATIC": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/matic.png",
+          "AVAX": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/avax.png",
+          "FTM": "https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/ftm.png",
+          "OP": "https://assets.coingecko.com/coins/images/25244/small/Optimism.png",
+          "ARB": "https://assets.coingecko.com/coins/images/16547/small/photo_2023-03-29_21.47.00.jpeg",
+          "BASE": "https://assets.coingecko.com/coins/images/27509/small/base.png",
+        };
+        
+        if (symbolUpper && nativeTokenIcons[symbolUpper]) {
+          return nativeTokenIcons[symbolUpper];
+        }
+      }
+
+      // Try cryptocurrency-icons first (most reliable)
+      const cryptoIconMap: { [key: string]: string } = {
+        "ETH": "eth", "WETH": "eth", "BTC": "btc", "WBTC": "btc", 
+        "USDT": "usdt", "USDC": "usdc", "DAI": "dai", "BUSD": "busd",
+        "LINK": "link", "UNI": "uni", "AAVE": "aave", "MATIC": "matic",
+        "BNB": "bnb", "AVAX": "avax", "SOL": "sol", "DOT": "dot", "ATOM": "atom",
+        "PEPE": "pepe", "SHIB": "shib", "FLOKI": "floki", "BONK": "bonk",
+      };
+      
+      const cryptoIcon = cryptoIconMap[symbolUpper];
+      if (cryptoIcon) {
+        return `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${cryptoIcon}.png`;
+      }
+      
+      // Try TrustWallet assets
+      if (addressLower && addressLower !== "0x0000000000000000000000000000000000000000" && addressLower.length >= 42) {
+        const chainNameMap: { [key: number]: string } = {
+          1: "ethereum",
+          56: "smartchain",
+          137: "polygon",
+          42161: "arbitrum",
+          10: "optimism",
+          8453: "base",
+          43114: "avalanchec",
+          250: "fantom",
+        };
+        const twChain = chainNameMap[chainId];
+        if (twChain) {
+          return `https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${twChain}/assets/${addressLower}/logo.png`;
+        }
+      }
+      
+      // Try DeFi Llama
+      if (addressLower && addressLower !== "0x0000000000000000000000000000000000000000" && addressLower.length >= 42) {
+        return `https://icons.llamao.fi/icons/tokens/${chainId}/${addressLower}`;
+      }
+      
+      return undefined;
+    };
+    
     const tokenMap = new Map<string, Token>();
-    const seenAddresses = new Set<string>();
     
     // Helper function to create unique key for deduplication
-    const createTokenKey = (token: Token) => `${token.symbol}-${token.chainId}-${token.address.toLowerCase()}`;
+    // STRICT: Only address + chainId matters (same token on same chain = duplicate)
+    const createTokenKey = (token: Token) => `${token.address.toLowerCase()}-${token.chainId}`;
     
     // Helper function to validate token has proper contract address
     const isValidToken = (token: Token) => {
@@ -701,22 +750,28 @@ export function TokenSelectionModal({
       return true;
     };
     
-    // Helper function to add token with deduplication
+    // Helper function to add token with STRICT deduplication
     const addToken = (token: Token, priority: number = 0) => {
       if (!isValidToken(token)) return;
       
+      // STRICT deduplication: address + chainId must be unique
       const key = createTokenKey(token);
-      const addressKey = `${token.address.toLowerCase()}-${token.chainId}`;
       
-      // Skip if we've already seen this exact address-chain combination
-      if (seenAddresses.has(addressKey)) {
+      // If we already have this exact address+chainId combo, skip it
+      if (tokenMap.has(key)) {
+        const existing = tokenMap.get(key)!;
+        // Only upgrade if new token has better metadata (logoURI, name, etc.)
+        if (!existing.logoURI && token.logoURI) {
+          tokenMap.set(key, {
+            ...existing,
+            logoURI: token.logoURI,
+            name: existing.name === 'Unknown Token' ? token.name : existing.name,
+          });
+        }
         return;
       }
       
-      // Add to seen addresses
-      seenAddresses.add(addressKey);
-      
-      // Add token with priority (lower number = higher priority)
+      // Add token with priority
       tokenMap.set(key, {
         ...token,
         priority,
@@ -739,6 +794,7 @@ export function TokenSelectionModal({
         balance: balance.balance,
         usdValue: `$${balance.usdValue.toFixed(2)}`,
         decimals: decimals,
+        logoURI: balance.logoURI || getLogoURIForToken(balance.symbol, balance.address, chainId),
         source: "wallet",
       }, 1);
     });
@@ -747,30 +803,37 @@ export function TokenSelectionModal({
     POPULAR_TOKENS_WITH_LOGOS.forEach((token) => {
       addToken({
         ...token,
+        logoURI: token.logoURI || getLogoURIForToken(token.symbol, token.address, token.chainId),
         source: "popular",
       }, 2);
     });
     
-    // 3. CoinGecko tokens (comprehensive list with verified addresses - priority 3)
-    coinGeckoTokens.forEach((token) => {
+    // 3. Searched tokens from reliable multi-source service (priority 3)
+    searchedTokens.forEach((token) => {
+      // Ensure logoURI is set
       addToken({
         ...token,
-        source: "coingecko",
+        logoURI: token.logoURI || getLogoURIForToken(token.symbol, token.address, token.chainId),
+        source: "token-search",
       }, 3);
     });
     
-    // 4. All tokens from comprehensive API (CoinGecko + all chains - priority 4)
+    // 4. All tokens from comprehensive API (multi-source - priority 4)
     allTokens.forEach((token) => {
+      // Ensure logoURI is set
       addToken({
         ...token,
+        logoURI: token.logoURI || getLogoURIForToken(token.symbol, token.address, token.chainId),
         source: token.source || "comprehensive",
       }, 4);
     });
     
     // 5. LiFi supported tokens for selected chain (priority 5)
     lifiTokens.forEach((token) => {
+      // Ensure logoURI is set
       addToken({
         ...token,
+        logoURI: token.logoURI || getLogoURIForToken(token.symbol, token.address, token.chainId),
         source: "lifi",
       }, 5);
     });
@@ -797,27 +860,63 @@ export function TokenSelectionModal({
     }, {});
     console.log("[TokenSelectionModal] 📊 Token distribution by source:", sourceDistribution);
     
+    // Log how many tokens have logoURI
+    const tokensWithLogos = tokens.filter((t: any) => t.logoURI);
+    console.log(`[TokenSelectionModal] 🖼️ Tokens with logos: ${tokensWithLogos.length}/${tokens.length}`);
+    
     return tokens;
-  }, [tokenBalances, coinGeckoTokens, allTokens, lifiTokens]);
+  }, [tokenBalances, searchedTokens, allTokens, lifiTokens]);
 
-  const filteredTokens = allTokensCombined.filter((token) => {
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      return (
-        token.symbol.toLowerCase().includes(query) ||
-        token.name.toLowerCase().includes(query) ||
-        token.address.toLowerCase().includes(query)
-      )
-    }
+  const filteredTokens = allTokensCombined
+    .filter((token) => {
+      // Filter by search query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const matchesQuery = (
+          token.symbol.toLowerCase().includes(query) ||
+          token.name.toLowerCase().includes(query) ||
+          token.address.toLowerCase().includes(query)
+        )
+        if (!matchesQuery) return false
+      }
 
-    // Filter by selected chain
-    if (selectedChain) {
-      return token.chainId === selectedChain
-    }
+      // Filter by selected chain
+      if (selectedChain) {
+        if (token.chainId !== selectedChain) return false
+      }
 
-    return true
-  })
+      return true
+    })
+    .sort((a, b) => {
+      // PRIORITY 1: Tokens with logoURI first (icons available)
+      const aHasIcon = !!(a.logoURI && a.logoURI.startsWith('http'))
+      const bHasIcon = !!(b.logoURI && b.logoURI.startsWith('http'))
+      
+      if (aHasIcon && !bHasIcon) return -1
+      if (!aHasIcon && bHasIcon) return 1
+      
+      // PRIORITY 2: Wallet tokens first
+      if (a.source === "wallet" && b.source !== "wallet") return -1
+      if (b.source === "wallet" && a.source !== "wallet") return 1
+      
+      // PRIORITY 3: Market cap rank
+      const rankA = (a as any).marketCapRank || 999999
+      const rankB = (b as any).marketCapRank || 999999
+      return rankA - rankB
+    })
+    .filter((token) => {
+      // Show wallet tokens even without icons (user's actual balances)
+      if (token.source === "wallet") return true
+      
+      // Show native tokens even without icons (ETH, BNB, MATIC, etc.)
+      const isNativeToken = !token.address || 
+        token.address === "0x0000000000000000000000000000000000000000" || 
+        token.address.toLowerCase() === "native";
+      if (isNativeToken) return true
+      
+      // HIDE other tokens without logoURI (only show tokens with icon URLs)
+      return !!(token.logoURI && token.logoURI.startsWith('http'))
+    })
 
   const handleTokenSelect = (token: Token) => {
     console.log("[v0] Token selected:", {
@@ -832,22 +931,18 @@ export function TokenSelectionModal({
   }
 
   const getTokenIcon = (token: Token) => {
-    if (token.logoURI) {
-      return (
-        <img
-          src={token.logoURI || "/placeholder.svg"}
-          alt={token.symbol}
-          className="w-8 h-8 rounded-full"
-          onError={(e) => {
-            // Fallback to text icon if image fails to load
-            e.currentTarget.style.display = "none"
-            e.currentTarget.nextElementSibling?.classList.remove("hidden")
-          }}
-        />
-      )
-    }
-
-    
+    // Always use TokenIconWithFallback for proper fallback handling
+    return (
+      <TokenIconWithFallback
+        symbol={token.symbol}
+        address={token.address}
+        chainId={token.chainId}
+        chainName={token.chainName}
+        logoURI={token.logoURI}
+        size={32}
+        className="w-8 h-8 rounded-full"
+      />
+    );
   }
 
   return (
@@ -980,13 +1075,21 @@ export function TokenSelectionModal({
               {/* Contract Address Search */}
               <div className="relative">
                 <Input
-                  placeholder="Enter contract address (0x...)"
+                  placeholder="Paste contract address (0x...)"
                   value={customTokenAddress}
-                  onChange={(e) => setCustomTokenAddress(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value.trim()
+                    setCustomTokenAddress(value)
+                    
+                    // Auto-fetch when valid contract address is pasted (42 chars)
+                    if (/^0x[a-fA-F0-9]{40}$/.test(value)) {
+                      fetchTokenByAddress(value, selectedChain || 1)
+                    }
+                  }}
                   className="bg-gray-900 border-gray-700 text-white"
                 />
                 <Button
-                  onClick={() => fetchTokenByAddress(customTokenAddress)}
+                  onClick={() => fetchTokenByAddress(customTokenAddress, selectedChain || 1)}
                   disabled={!customTokenAddress || isLoadingCustomToken || customTokenAddress.length !== 42}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs"
                 >
@@ -1025,18 +1128,18 @@ export function TokenSelectionModal({
             </div>
 
             {/* Helpful hint when no search/filter */}
-            {!searchQuery && !selectedChain && !isLoadingCoinGecko && (
+            {!searchQuery && !selectedChain && !isLoadingTokenSearch && (
               <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-3 mb-3">
                 <p className="text-yellow-400 text-xs">
-                  💡 <strong>Tip:</strong> Search for ANY token listed on CoinGecko (e.g., &ldquo;WEN&rdquo;, &ldquo;PEPE&rdquo;, &ldquo;SHIB&rdquo;)
+                  💡 <strong>Tip:</strong> Search for ANY token (e.g., &ldquo;WEN&rdquo;, &ldquo;PEPE&rdquo;, &ldquo;SHIB&rdquo;)
                 </p>
                 <p className="text-gray-400 text-xs mt-1">
-                  Real-time search covers 10,000+ tokens across 50+ blockchains
+                  Real-time search from multiple reliable sources: Token Lists, 1inch, Uniswap, ParaSwap, LiFi
                 </p>
               </div>
             )}
 
-            {(isLoadingTokens || isLoadingCoinGecko) && (
+            {(isLoadingTokens || isLoadingTokenSearch) && (
               <div className="space-y-2 mb-3">
                 {/* Loading skeleton */}
                 {[1, 2, 3].map((i) => (
@@ -1052,8 +1155,8 @@ export function TokenSelectionModal({
                   </div>
                 ))}
                 <p className="text-center text-gray-400 text-sm mt-2">
-                  {isLoadingCoinGecko && searchQuery && `🔍 Searching CoinGecko for ${searchQuery}...`}
-                  {isLoadingCoinGecko && !searchQuery && "Loading CoinGecko tokens..."}
+                  {isLoadingTokenSearch && searchQuery && `🔍 Searching for ${searchQuery}...`}
+                  {isLoadingTokenSearch && !searchQuery && "Loading tokens..."}
                   {isLoadingTokens && selectedChain && `Loading ${CHAINS.find((c) => c.id === selectedChain)?.name} tokens...`}
                 </p>
               </div>
@@ -1071,7 +1174,7 @@ export function TokenSelectionModal({
             {/* Show loading indicator for comprehensive tokens */}
             {isLoadingAllTokens && (
               <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-3 text-center">
-                <p className="text-blue-400 font-medium">🌍 Loading all tokens from CoinGecko...</p>
+                <p className="text-blue-400 font-medium">🌍 Loading all tokens from reliable sources...</p>
                 <p className="text-gray-400 text-xs mt-1">
                   Fetching tokens across all supported chains
                 </p>
@@ -1079,11 +1182,11 @@ export function TokenSelectionModal({
             )}
 
             {/* Show message if search returned no results */}
-            {searchQuery && searchQuery.length >= 2 && filteredTokens.length === 0 && !isLoadingCoinGecko && !isLoadingAllTokens && (
+            {searchQuery && searchQuery.length >= 2 && filteredTokens.length === 0 && !isLoadingTokenSearch && !isLoadingAllTokens && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-3 text-center">
                 <p className="text-red-400 font-medium">No tokens found for &ldquo;{searchQuery}&rdquo;</p>
                 <p className="text-gray-400 text-xs mt-1">
-                  Try: Different spelling, token symbol, or check CoinGecko.com
+                  Try: Different spelling, token symbol, or paste contract address
                 </p>
               </div>
             )}
@@ -1138,7 +1241,7 @@ export function TokenSelectionModal({
         </div>
         <div className="text-xs text-gray-500 mt-1">
           {(token as any).source === 'wallet' && '💰 Your Balance'}
-          {(token as any).source === 'coingecko' && '🔍 CoinGecko Verified'}
+          {(token as any).source === 'token-search' && '🔍 Verified'}
           {(token as any).source === 'comprehensive' && '🌍 Multi-Chain'}
           {(token as any).source === 'popular' && '⭐ Popular Token'}
           {(token as any).source === 'lifi' && '🌉 LiFi Supported'}
@@ -1169,12 +1272,6 @@ export function TokenSelectionModal({
       <DialogTitle className="text-white text-base font-semibold">
         Select Token
       </DialogTitle>
-      <button
-        onClick={onClose}
-        className="text-gray-400 hover:text-white text-lg font-light"
-      >
-        ✕
-      </button>
     </div>
     {/* Wallet context indicator */}
     {walletContext === "secondary" && (
@@ -1274,14 +1371,70 @@ export function TokenSelectionModal({
         ))}
       </div>
     )}
+
+    {/* Contract Address Search - Mobile */}
+    <div className="mt-3 space-y-2">
+      <div className="relative">
+        <Input
+          placeholder="Paste contract address (0x...)"
+          value={customTokenAddress}
+          onChange={(e) => {
+            const value = e.target.value.trim()
+            setCustomTokenAddress(value)
+            
+            // Auto-fetch when valid contract address is pasted (42 chars)
+            if (/^0x[a-fA-F0-9]{40}$/.test(value)) {
+              fetchTokenByAddress(value, selectedChain || 1)
+            }
+          }}
+          className="bg-[#1A1A1A] border-none text-white rounded-md pr-20"
+        />
+        <Button
+          onClick={() => fetchTokenByAddress(customTokenAddress, selectedChain || 1)}
+          disabled={!customTokenAddress || isLoadingCustomToken || customTokenAddress.length !== 42}
+          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 text-xs h-7"
+        >
+          {isLoadingCustomToken ? "Loading..." : "Add"}
+        </Button>
+      </div>
+      
+      {/* Custom Token Display - Mobile */}
+      {customToken && (
+        <div className="bg-[#1A1A1A] border border-gray-700 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3 flex-1 min-w-0">
+              <TokenIconWithFallback
+                symbol={customToken.symbol}
+                logoURI={customToken.logoURI}
+                size={24}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="text-white font-medium text-sm truncate">{customToken.symbol}</div>
+                <div className="text-gray-400 text-xs truncate">{customToken.name}</div>
+                <div className="text-gray-500 text-xs truncate">{customToken.address}</div>
+              </div>
+            </div>
+            <Button
+              onClick={() => {
+                onSelectToken(customToken)
+                onClose()
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 text-xs ml-2 flex-shrink-0"
+            >
+              Select
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   </div>
 
   {/* Helpful hint for mobile */}
-  {!searchQuery && !selectedChain && !isLoadingCoinGecko && (
+  {!searchQuery && !selectedChain && !isLoadingTokenSearch && (
     <div className="px-4 mb-2">
       <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-2">
         <p className="text-yellow-400 text-xs">
-          💡 <strong>Search ANY token on CoinGecko!</strong>
+          💡 <strong>Search ANY token!</strong>
         </p>
         <p className="text-gray-400 text-xs mt-0.5">
           Try: WEN, PEPE, SHIB, or any token name
@@ -1291,7 +1444,7 @@ export function TokenSelectionModal({
   )}
 
   {/* Loading state for mobile */}
-  {(isLoadingTokens || isLoadingCoinGecko) && (
+  {(isLoadingTokens || isLoadingTokenSearch) && (
     <div className="px-4 space-y-2 mb-3">
       {[1, 2, 3].map((i) => (
         <div key={i} className="flex items-center justify-between p-3 bg-[#1A1A1A] rounded-lg animate-pulse">
