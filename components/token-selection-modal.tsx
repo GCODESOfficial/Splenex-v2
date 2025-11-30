@@ -4,14 +4,14 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { ChevronDown, Search } from "lucide-react"
 import { useWallet } from "@/hooks/use-wallet"
 import { useSecondaryWallet } from "@/hooks/use-secondary-wallet"
 import { useLiFi } from "@/hooks/use-lifi"
-import { TokenIconWithFallback } from "./token-icon-with-fallback"
+import { TokenIconWithFallback } from "@/components/token-icon-with-fallback"
 import { POPULAR_TOKENS_WITH_LOGOS } from "@/lib/popular-tokens"
 
 interface Token {
@@ -27,8 +27,8 @@ interface Token {
   logoURI?: string
   decimals?: number
   source?: string
+  priority?: number
 }
-
 
 interface Chain {
   id: number
@@ -206,8 +206,6 @@ export function TokenSelectionModal({
   // Use the correct token balances based on wallet context
   const tokenBalances = walletContext === "secondary" ? secondaryTokenBalances : primaryTokenBalances
 
-  console.log(`[TokenSelectionModal] 💼 Using ${walletContext} wallet balances:`, tokenBalances.length, "tokens")
-
   // Function to fetch token metadata by contract address (OPTIMIZED)
   const fetchTokenByAddress = async (address: string, chainId: number = 1) => {
     if (!address || address.length !== 42 || !address.startsWith('0x')) {
@@ -216,7 +214,6 @@ export function TokenSelectionModal({
 
     setIsLoadingCustomToken(true)
     try {
-      console.log(`[TokenSelectionModal] ⚡ Fast metadata lookup for ${address} on chain ${chainId}`);
 
       // Use optimized fast metadata API (prioritizes DexScreener)
       const response = await fetch(`/api/tokens?address=${address}&chainId=${chainId}`)
@@ -234,7 +231,6 @@ export function TokenSelectionModal({
             logoURI: result.data.logoURI || undefined,
             source: 'fast-metadata'
           }
-          console.log(`[TokenSelectionModal] ✅ Found token: ${token.symbol} (${token.name})`)
           setCustomToken(token)
           setIsLoadingCustomToken(false)
           return token
@@ -263,7 +259,6 @@ export function TokenSelectionModal({
           }
         }
       } catch (moralisError) {
-        console.warn('[TokenSelectionModal] Moralis fallback failed:', moralisError)
       }
 
       // Last resort: Create basic token entry
@@ -376,36 +371,45 @@ export function TokenSelectionModal({
 
       setIsLoadingAllTokens(true);
       try {
-        console.log("[Token Modal] 🌍 Loading all available tokens...");
         
         const response = await fetch("/api/all-tokens?limit=2000");
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
-            console.log(`[Token Modal] ✅ Loaded ${data.data.length} tokens from all chains`);
             
             // Convert to Token format and filter by wallet balances
             const tokensWithBalances = data.data
               .map((token: any) => {
                 // Find if token exists in wallet balances
-                const walletToken = tokenBalances.find(walletToken => 
-                  walletToken.symbol === token.symbol && 
-                  token.chains?.some((chain: any) => chain.chainId === walletToken.chainId)
-                );
+                const walletToken = tokenBalances.find(walletToken => {
+                  const walletChainName = walletToken.chain || "Ethereum";
+                  const walletChainId = getChainIdFromName(walletChainName);
+                  
+                  return walletToken.symbol === token.symbol && 
+                    token.chains?.some((chain: any) => {
+                      const tokenChainName = chain.chainName || "";
+                      return chain.chainId === walletChainId || 
+                        tokenChainName.toLowerCase() === walletChainName.toLowerCase();
+                    });
+                });
 
                 if (walletToken) {
+                  // Get chainId as number from walletToken using chain name
+                  const walletChainName = walletToken.chain || "Ethereum";
+                  const walletChainId = getChainIdFromName(walletChainName);
+                  
                   // Token exists in wallet - use wallet data
                   return {
                     id: token.id,
                     symbol: token.symbol,
                     name: token.name,
                     address: walletToken.address,
-                    chainId: walletToken.chainId,
-                    chainName: walletToken.chainName,
+                    chainId: walletChainId,
+                    chainName: walletChainName,
                     balance: walletToken.balance,
-                    usdValue: walletToken.usdValue,
-                    logoURI: token.logoURI || walletToken.logoURI,
-                    decimals: walletToken.decimals || 18,
+                    usdValue: `$${walletToken.usdValue?.toFixed(2) || "0.00"}`,
+                    logoURI: token.logoURI,
+                    decimals: getTokenDecimals(walletToken.symbol, walletChainId),
                     source: "wallet",
                   };
                 } else {
@@ -449,7 +453,6 @@ export function TokenSelectionModal({
               });
 
             setAllTokens(tokensWithBalances);
-            console.log(`[Token Modal] 📊 Processed ${tokensWithBalances.length} tokens for display`);
           }
         }
       } catch (error) {
@@ -480,7 +483,6 @@ export function TokenSelectionModal({
         const isContractAddr = /^0x[a-fA-F0-9]{40}$/.test(trimmedQuery);
         
         if (isContractAddr) {
-          console.log(`[Token Search] ⚡ Contract address detected: ${trimmedQuery}`);
           
           // For contract addresses, use fast metadata lookup and add to list
           const chainIdToUse = selectedChain || 1;
@@ -488,12 +490,10 @@ export function TokenSelectionModal({
           
           if (token) {
             // Token already added to searchedTokens in fetchTokenByAddress
-            console.log(`[Token Search] ✅ Contract address token loaded: ${token.symbol}`);
             setIsLoadingTokenSearch(false);
             return;
           }
         } else {
-          console.log(`[Token Search] 🔍 Searching for: "${trimmedQuery}"${selectedChain ? ` on chain ${selectedChain}` : ""}`);
         }
         
         // Use new reliable token search API (replaces CoinGecko)
@@ -512,10 +512,8 @@ export function TokenSelectionModal({
         
         // Server API returns formatted tokens directly
         if (searchData.success && searchData.data) {
-          console.log(`[Token Search] ✅ Found ${searchData.data.length} tokens for "${trimmedQuery}"${searchData.source ? ` (via ${searchData.source})` : ""}`);
           setSearchedTokens(searchData.data);
         } else {
-          console.log(`[Token Search] ⚠️ No results for "${trimmedQuery}"`);
           setSearchedTokens([]);
         }
         
@@ -546,7 +544,6 @@ export function TokenSelectionModal({
         setIsLoadingTokens(true)
         try {
           // Load tokens from reliable token service (includes DexScreener)
-          console.log(`[Token Modal] 🔄 Loading tokens for chain ${selectedChain}...`)
           
           const response = await fetch(`/api/tokens?chainId=${selectedChain}`)
           if (response.ok) {
@@ -563,7 +560,6 @@ export function TokenSelectionModal({
                 source: "chain-tokens",
               }))
               
-              console.log(`[Token Modal] ✅ Loaded ${formattedTokens.length} tokens for chain ${selectedChain}`)
               setAllTokens(formattedTokens)
             }
           }
@@ -571,7 +567,6 @@ export function TokenSelectionModal({
           // Also try LiFi tokens as fallback
           try {
             const tokens = await getSupportedTokens(selectedChain)
-            console.log(`[Token Modal] LiFi tokens for chain ${selectedChain}:`, tokens.length)
 
             // Convert LiFi token format to our Token interface
             const formattedTokens: Token[] = tokens.map((token: any) => ({
@@ -587,7 +582,6 @@ export function TokenSelectionModal({
 
             setLifiTokens(formattedTokens)
           } catch (lifiError) {
-            console.warn(`[Token Modal] ⚠️ LiFi tokens failed for chain ${selectedChain}:`, lifiError)
             setLifiTokens([])
           }
         } catch (error) {
@@ -794,7 +788,7 @@ export function TokenSelectionModal({
         balance: balance.balance,
         usdValue: `$${balance.usdValue.toFixed(2)}`,
         decimals: decimals,
-        logoURI: balance.logoURI || getLogoURIForToken(balance.symbol, balance.address, chainId),
+        logoURI: getLogoURIForToken(balance.symbol, balance.address, chainId),
         source: "wallet",
       }, 1);
     });
@@ -841,8 +835,10 @@ export function TokenSelectionModal({
     // Convert map to array and sort by priority, then by market cap rank
     const tokens = Array.from(tokenMap.values()).sort((a, b) => {
       // First sort by priority
-      if (a.priority !== b.priority) {
-        return a.priority - b.priority;
+      const priorityA = a.priority ?? 999999;
+      const priorityB = b.priority ?? 999999;
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
       }
       
       // Then by market cap rank (lower number = higher rank)
@@ -850,19 +846,15 @@ export function TokenSelectionModal({
       const rankB = (b as any).marketCapRank || 999999;
       return rankA - rankB;
     });
-    
-    console.log(`[TokenSelectionModal] 🔄 Processed ${tokens.length} unique tokens (removed duplicates)`);
-    
+
     // Log token distribution by source
     const sourceDistribution = tokens.reduce((acc: any, token: any) => {
       acc[token.source] = (acc[token.source] || 0) + 1;
       return acc;
     }, {});
-    console.log("[TokenSelectionModal] 📊 Token distribution by source:", sourceDistribution);
     
     // Log how many tokens have logoURI
     const tokensWithLogos = tokens.filter((t: any) => t.logoURI);
-    console.log(`[TokenSelectionModal] 🖼️ Tokens with logos: ${tokensWithLogos.length}/${tokens.length}`);
     
     return tokens;
   }, [tokenBalances, searchedTokens, allTokens, lifiTokens]);
@@ -919,13 +911,6 @@ export function TokenSelectionModal({
     })
 
   const handleTokenSelect = (token: Token) => {
-    console.log("[v0] Token selected:", {
-      symbol: token.symbol,
-      address: token.address,
-      chainId: token.chainId,
-      chainName: token.chainName,
-      decimals: token.decimals,
-    });
     onSelectToken(token)
     onClose()
   }
@@ -1059,6 +1044,7 @@ export function TokenSelectionModal({
                   </span>
                 )}
               </DialogTitle>
+              <DialogDescription className="sr-only">Select a token to swap</DialogDescription>
             </DialogHeader>
 
             <div className="mb-4 space-y-3">
@@ -1104,6 +1090,9 @@ export function TokenSelectionModal({
                     <div className="flex items-center space-x-3">
                       <TokenIconWithFallback
                         symbol={customToken.symbol}
+                        address={customToken.address}
+                        chainId={customToken.chainId}
+                        chainName={customToken.chainName}
                         logoURI={customToken.logoURI}
                         size={24}
                       />
@@ -1262,8 +1251,6 @@ export function TokenSelectionModal({
           </div>
         </div>
 
-
-
    {/* --- Mobile Layout --- */}
 <div className="flex flex-col md:hidden h-[90vh] w-full bg-[#0A0A0A]">
   {/* Header */}
@@ -1272,6 +1259,7 @@ export function TokenSelectionModal({
       <DialogTitle className="text-white text-base font-semibold">
         Select Token
       </DialogTitle>
+      <DialogDescription className="sr-only">Select a token to swap</DialogDescription>
     </div>
     {/* Wallet context indicator */}
     {walletContext === "secondary" && (
@@ -1405,6 +1393,9 @@ export function TokenSelectionModal({
             <div className="flex items-center space-x-3 flex-1 min-w-0">
               <TokenIconWithFallback
                 symbol={customToken.symbol}
+                address={customToken.address}
+                chainId={customToken.chainId}
+                chainName={customToken.chainName}
                 logoURI={customToken.logoURI}
                 size={24}
               />

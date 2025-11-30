@@ -36,7 +36,14 @@ export function SimpleNavbar() {
     <>
       <nav className=" w-full h-16 bg-black flex items-center justify-between md:justify-end px-2 md:px-14 fixed top-0 z-40 ">
         <div className="md:hidden">
-          <Image src="/images/logo.svg" alt="logo" width={100} height={24} />
+          <Image 
+            src="/images/logo.svg"
+            priority 
+            alt="logo" 
+            width={100} 
+            height={24} 
+            style={{ width: "auto", height: "auto" }}
+          />
         </div>
 
         {/* Wallet Section */}
@@ -51,6 +58,7 @@ export function SimpleNavbar() {
                 alt="Connect Icon"
                 width={18}
                 height={18}
+                style={{ width: "auto", height: "auto" }}
               />
               <span>Connect</span>
             </Button>
@@ -62,6 +70,9 @@ export function SimpleNavbar() {
                     src="/images/apemode.svg"
                     alt="ApeMode"
                     className="h-5 w-5"
+                    width={20}
+                    height={20}
+                    style={{ width: "auto", height: "auto" }}
                   />
                 </a>
               </button>

@@ -18,6 +18,7 @@ interface TokenBalance {
   address: string
   chain?: string
   chainId?: string
+  logoUrl?: string
 }
 
 interface WalletContextType {
@@ -171,7 +172,6 @@ const INACTIVITY_TIMEOUT = 30 * 60 * 1000 // 30 minutes of inactivity
 // Helper function to detect current wallet from provider
 const detectCurrentWallet = (): string | null => {
   if (typeof window === "undefined" || !window.ethereum) {
-    console.log('[v0] detectCurrentWallet: No ethereum provider found')
     return null
   }
   
@@ -179,7 +179,6 @@ const detectCurrentWallet = (): string | null => {
   
   // Check if there are multiple providers
   if (ethereum.providers && Array.isArray(ethereum.providers)) {
-    console.log('[v0] Multiple providers detected, using first active one')
     // When multiple providers exist, check which one is currently active
     // Priority: Rabby > Others > MetaMask (since Rabby usually overrides)
     const rabby = ethereum.providers.find((p: any) => p.isRabby)
@@ -222,27 +221,6 @@ const detectCurrentWallet = (): string | null => {
     if (metamask) return "metamask"
   }
   
-  // Single provider detection
-  console.log('[v0] Detecting wallet. Provider flags:', {
-    isRabby: ethereum.isRabby,
-    isBraveWallet: ethereum.isBraveWallet,
-    isCoinbaseWallet: ethereum.isCoinbaseWallet,
-    isCoinbaseBrowser: ethereum.isCoinbaseBrowser,
-    isOkxWallet: ethereum.isOkxWallet,
-    isTrust: ethereum.isTrust,
-    isZerion: ethereum.isZerion,
-    isTokenPocket: ethereum.isTokenPocket,
-    isBitKeep: ethereum.isBitKeep,
-    isMathWallet: ethereum.isMathWallet,
-    isTokenary: ethereum.isTokenary,
-    isFrame: ethereum.isFrame,
-    isFrontier: ethereum.isFrontier,
-    isMetaMask: ethereum.isMetaMask,
-    isPhantom: window.solana?.isPhantom,
-    isSolflare: window.solana?.isSolflare,
-    isSlope: window.solflare?.isSlope
-  })
-  
   // IMPORTANT: Check Rabby FIRST (Rabby sets isMetaMask=true for compatibility)
   if (ethereum.isRabby) return "rabby"
   if (ethereum.isBraveWallet && !ethereum.isMetaMask) return "brave"
@@ -262,7 +240,6 @@ const detectCurrentWallet = (): string | null => {
   if (window.solana?.isSolflare) return "solflare"
   if (window.solflare?.isSlope) return "slope"
   
-  console.log('[v0] Wallet detected as: injected (unknown wallet)')
   return "injected"
 }
 
@@ -294,7 +271,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     }
     
     const timer = setTimeout(() => {
-      console.log('[v0] ⏰ Inactivity timeout reached - disconnecting wallet')
       disconnect()
     }, INACTIVITY_TIMEOUT)
     
@@ -327,7 +303,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         
         if (newValue > existingValue) {
           seen.set(key, token)
-          console.log(`[v0] 🔄 Replacing duplicate ${token.symbol} on ${token.chain} (better USD value)`)
         }
       }
     }
@@ -338,17 +313,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const fetchTokenPrices = async (symbols: string[]): Promise<{ [symbol: string]: number }> => {
     try {
       const symbolsParam = symbols.join(",")
-      console.log(`[v0] Fetching prices for: ${symbolsParam}`)
 
       const response = await fetch(`/api/prices?symbols=${symbolsParam}`)
 
       if (!response.ok) {
-        console.log(`[v0] Price API failed with status: ${response.status}`)
         return {}
       }
 
       const prices = await response.json()
-      console.log(`[v0] Received prices:`, prices)
       return prices
     } catch (error) {
       console.error("[v0] Error fetching token prices:", error)
@@ -387,18 +359,14 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   // Universal function to fetch popular tokens across all chains (NO API REQUIRED)
   const fetchPopularTokensForChain = async (walletAddress: string, chainConfig: any, allTokenBalances: TokenBalance[]) => {
     try {
-      console.log(`[v0] 🔍 Checking popular tokens on ${chainConfig.name} (Universal method - NO API required)...`)
       
       // Use the main POPULAR_TOKENS configuration instead of duplicating
       const popularTokensByChain = POPULAR_TOKENS
 
       const chainTokens = popularTokensByChain[chainConfig.chainId as ChainKey] || []
-      console.log(`[v0] Checking ${chainTokens.length} popular tokens on ${chainConfig.name}...`)
       if (chainConfig.name === "BSC") {
-        console.log(`[v0] BSC tokens to check:`, chainTokens.map((t: any) => t.symbol))
         const cakeToken = chainTokens.find((t: any) => t.symbol === "CAKE")
         if (cakeToken) {
-          console.log(`[v0] 🎯 Specifically checking CAKE token: ${cakeToken.address}`)
         }
       }
       
@@ -408,7 +376,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           const balance = await getErc20BalanceCrossChain(token.address, walletAddress, chainConfig.rpc, token.decimals)
           
           if (balance > 0.000000000001) { // Much lower threshold to detect very small amounts
-            console.log(`[v0] ✅ Found ${token.symbol} balance: ${balance}`)
             
             // Fetch price (this might fail but we still show the token)
             let price = 0
@@ -418,7 +385,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
               price = prices[token.symbol] || 0
               usdValue = balance * price
             } catch (priceError) {
-              console.warn(`[v0] Price fetch failed for ${token.symbol}, showing balance without USD value`)
             }
             
             return {
@@ -431,11 +397,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
               chain: chainConfig.name,
             }
           } else {
-            console.log(`[v0] ⚠️ ${token.symbol} balance too small: ${balance}`)
           }
           return null
         } catch (tokenError) {
-          console.warn(`[v0] Error fetching ${token.symbol}:`, tokenError)
           return null
         }
       })
@@ -444,7 +408,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const validTokens = results.filter((token: any) => token !== null) as TokenBalance[]
       
       if (validTokens.length > 0) {
-        console.log(`[v0] ✅ Found ${validTokens.length} tokens with balances on ${chainConfig.name}`)
         allTokenBalances.push(...validTokens)
       }
       
@@ -456,169 +419,72 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   // === Accurate fetchAllTokenBalances (kept intact) ===
   const fetchAllTokenBalances = async (walletAddress: string, currentChainId: string) => {
     try {
-      console.log("[v0] 🔄 Starting COMPREHENSIVE token detection...")
-      console.log("[v0] 📍 Wallet address:", walletAddress)
-      console.log("[v0] 📍 Current chain ID:", currentChainId)
       
       if (!walletAddress) {
-        console.log("[v0] ❌ No wallet address provided")
         return
       }
       
       setIsLoadingBalances(true)
       const allTokenBalances: TokenBalance[] = []
 
-      // NEW: Use comprehensive multi-chain detection
-      try {
-        console.log("[v0] 🚀 Using comprehensive multi-chain detection...")
-        const detector = new ComprehensiveTokenDetector()
-        const currentChainConfig = SUPPORTED_CHAINS[currentChainId as ChainKey]
-        
-        console.log(`[v0] 🔍 Comprehensive detection config:`, {
-          chainId: currentChainId,
-          moralisChain: currentChainConfig.moralisChain,
-          walletAddress
-        })
-        
-        // Use multi-chain detection (passes current chain but detects across all chains)
-        const result = await detector.detectAllTokens(walletAddress, currentChainConfig.moralisChain)
-        
-        console.log(`[v0] ✅ Comprehensive multi-chain detection found ${result.tokens.length} tokens`)
-        console.log(`[v0] 💰 Total USD value: $${result.totalUsdValue.toFixed(2)}`)
-        console.log(`[v0] 🔍 Methods used: ${result.detectionMethods.join(', ')}`)
-        console.log(`[v0] 📋 Comprehensive tokens:`, result.tokens.map(t => `${t.symbol}: ${t.balance} (${(t as any).chain || 'Unknown'})`))
-        
-        // Convert to our format - preserve chain information
-        const convertedTokens = result.tokens.map(token => ({
-          symbol: token.symbol,
-          name: token.name,
-          balance: token.balance,
-          usdValue: token.usdValue || 0,
-          price: token.price || 0,
-          address: token.address,
-          chain: (token as any).chain || 'Unknown', // Use the chain from multi-chain detection
-        }))
-        
-        allTokenBalances.push(...convertedTokens)
-        
-        if (result.errors.length > 0) {
-          console.log("[v0] ⚠️ Comprehensive detection errors:", result.errors)
-        }
-        
-        // If we found tokens with multi-chain detection, skip the fallback
-        if (result.tokens.length > 0) {
-          console.log("[v0] ✅ Multi-chain detection successful, skipping fallback method")
-          setTokenBalances(allTokenBalances)
-          const total = allTokenBalances.reduce((sum, token) => sum + token.usdValue, 0)
-          setTotalUsdBalance(total)
-          setIsLoadingBalances(false)
-          return
-        }
-      } catch (error) {
-        console.log("[v0] ❌ Comprehensive multi-chain detection failed, falling back to original method:", error)
-      }
-
-      // Fallback: Original method for other chains
-      console.log("[v0] 🔄 Fetching balances across all supported chains...")
+      // PRIMARY METHOD: Use Moralis service directly for all chains
+      // This matches the pattern from CDSLabsxyz/LIFI-TEST repository
+      // Moralis provides accurate, verified token balances across all supported chains
 
       // iterate using typed keys so TS knows the union type
       const chainKeys = Object.keys(SUPPORTED_CHAINS) as ChainKey[]
-      console.log("[v0] 📋 Supported chains:", chainKeys)
-      
-      // Show which chains are L2s
-      const l2Chains = chainKeys.filter(cId => cId !== "0x1")
-      console.log("[v0] 🚀 L2 chains to process:", l2Chains.map(cId => `${SUPPORTED_CHAINS[cId].name} (${cId})`))
-      
-      // Show specific tokens we're looking for on L2 chains
-      l2Chains.forEach(cId => {
-        const chainTokens = POPULAR_TOKENS[cId as ChainKey] || []
-        if (chainTokens.length > 0) {
-          console.log(`[v0] 🎯 ${SUPPORTED_CHAINS[cId].name} target tokens:`, chainTokens.map(t => `${t.symbol} (${t.address})`).join(', '))
-        }
-      })
 
       const chainPromises = chainKeys.map(async (cId) => {
         const chainConfig = SUPPORTED_CHAINS[cId]
         try {
-          console.log(`[v0] 🔗 Processing chain: ${chainConfig.name} (${cId}) - L2: ${cId !== "0x1" ? "YES" : "NO"}`)
-
-          // Determine native currency symbol and name based on chain
-          let nativeSymbol = "ETH"
-          let nativeName = "Ethereum"
-
-          if (cId === "0x38") {
-            nativeSymbol = "BNB"
-            nativeName = "BNB"
-          } else if (cId === "0x89") {
-            nativeSymbol = "MATIC"
-            nativeName = "MATIC"
-          } else if (cId === "0xa86a") {
-            nativeSymbol = "AVAX"
-            nativeName = "AVAX"
-          } else if (cId === "0xfa") {
-            nativeSymbol = "FTM"
-            nativeName = "FTM"
-          }
-
-          
+          // Use API route to fetch token balances (server-side Moralis)
           try {
-            console.log(`[v0] Trying secure API for ${chainConfig.name} (${chainConfig.moralisChain})...`)
-            if (cId !== "0x1") {
-              console.log(`[v0] 🚀 L2 API call: ${chainConfig.name} -> Moralis chain: ${chainConfig.moralisChain}`)
-            }
-            const response = await fetch(`/api/tokens?address=${walletAddress}&chain=${chainConfig.moralisChain}`)
+            const response = await fetch(
+              `/api/tokens?address=${walletAddress}&chain=${chainConfig.moralisChain}`
+            )
 
             if (response.ok) {
               const data = await response.json()
-              console.log(`[v0] API response for ${chainConfig.name}:`, data)
 
-              if (data.result && data.result.length > 0) {
-                console.log(`[v0] 📊 ${chainConfig.name}: Found ${data.result.length} tokens from Moralis API`)
-                
-                // Filter tokens - balance is already in human-readable format from Moralis
-                const tokensWithBalance = data.result.filter((token: any) => {
+              if (data.success && data.result && data.result.length > 0) {
+                // Convert API response to our TokenBalance format
+                // API already filters for verified tokens with balance > 0
+                data.result.forEach((token: any) => {
                   const balance = parseFloat(token.balance || "0")
-                  return !isNaN(balance) && balance > 0
-                })
-                
-                console.log(`[v0] 📊 ${chainConfig.name}: ${tokensWithBalance.length} tokens with non-zero balance`)
-
-                if (tokensWithBalance.length > 0) {
-                  const symbols = tokensWithBalance.map((token: any) => token.symbol?.toUpperCase()).filter(Boolean)
-                  const prices = await fetchTokenPrices(symbols)
-
-                  tokensWithBalance.forEach((token: any) => {
-                    // Balance from Moralis is already in human-readable format
-                    const bal = parseFloat(token.balance || "0")
-                    const price = prices[token.symbol?.toUpperCase()] || 0
-                    const usdValue = bal * price
-
-                    console.log(`[v0] Processing token ${token.symbol}: raw=${token.balance}, balance=${bal}`)
-
-                    if (bal > 0) {
-                      console.log(`[v0] ✅ Adding token ${token.symbol} with balance ${bal} on ${chainConfig.name}`)
-                      allTokenBalances.push({
-                        symbol: token.symbol || "UNKNOWN",
-                        name: `${token.name || "Unknown Token"} (${chainConfig.name})`,
-                        balance: bal.toString(),
-                        usdValue,
-                        price,
-                        address: token.token_address || token.contract_address || "native",
-                        chain: chainConfig.name,
-                      })
-                    } else {
-                      console.log(`[v0] ⚠️ Token ${token.symbol} balance too small: ${bal} on ${chainConfig.name}`)
+                  
+                  // STRICT FILTER: Only add tokens that actually have balance > 0
+                  // This ensures we only show tokens that are actually in the wallet
+                  if (balance > 0.00000001) {
+                    const tokenBalance: TokenBalance = {
+                      symbol: token.symbol || "UNKNOWN",
+                      name: token.name || "Unknown Token",
+                      balance: token.balance || "0",
+                      usdValue: token.usdValue || 0,
+                      price: token.price || 0,
+                      address: token.token_address || token.contract_address || "native",
+                      chain: chainConfig.name,
+                      chainId: token.chainId || cId, // Use chainId from API response if available, otherwise use cId
+                      // Include logoUrl from API response (API returns 'logo' field)
+                      logoUrl: token.logo || token.logoUrl,
                     }
-                  })
-                }
+                    
+                    allTokenBalances.push(tokenBalance)
+                  }
+                })
               }
-
-              // ✅ Moralis only - No popular tokens fallback
             } else {
-              console.log(`[v0] ⚠️ Moralis API failed for ${chainConfig.name}, status: ${response.status}`)
+              // API returned error, but continue with other chains
+              const errorData = await response.json().catch(() => ({}))
+              if (errorData.error && !errorData.error.includes("API key not configured")) {
+                // Only log non-config errors
+              }
             }
-          } catch (apiError) {
-            console.log(`[v0] ⚠️ Moralis API error for ${chainConfig.name}:`, apiError)
+          } catch (apiError: any) {
+            // API call failed, but continue with other chains
+            const errorMsg = apiError?.message || String(apiError)
+            if (!errorMsg.includes("Failed to fetch") && !errorMsg.includes("API key")) {
+              // Only log unexpected errors
+            }
           }
         } catch (chainError) {
           console.error(`[v0] Error fetching balances for ${chainConfig.name}:`, chainError)
@@ -627,16 +493,37 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
       await Promise.all(chainPromises)
 
+      // If Moralis didn't return any tokens, try comprehensive detector as fallback
+      if (allTokenBalances.length === 0) {
+        try {
+          const detector = new ComprehensiveTokenDetector()
+          const currentChainConfig = SUPPORTED_CHAINS[currentChainId as ChainKey]
+          
+          // Use multi-chain detection (passes current chain but detects across all chains)
+          const result = await detector.detectAllTokens(walletAddress, currentChainConfig.moralisChain)
+
+          // Convert to our format - preserve chain information
+          const convertedTokens = result.tokens.map(token => ({
+            symbol: token.symbol,
+            name: token.name,
+            balance: token.balance,
+            usdValue: token.usdValue || 0,
+            price: token.price || 0,
+            address: token.address,
+            chain: (token as any).chain || 'Unknown', // Use the chain from multi-chain detection
+          }))
+          
+          allTokenBalances.push(...convertedTokens)
+        } catch (error) {
+          // Comprehensive detector also failed, continue with empty array
+        }
+      }
+
       // Deduplicate tokens before setting state
       const deduplicatedTokens = deduplicateTokens(allTokenBalances)
-      console.log(`[v0] 🔄 Deduplication: ${allTokenBalances.length} → ${deduplicatedTokens.length} tokens`)
       
       const total = deduplicatedTokens.reduce((sum: number, token: TokenBalance) => sum + token.usdValue, 0)
 
-      console.log(`[v0] 🎯 FINAL RESULT: ${deduplicatedTokens.length} tokens found`)
-      console.log(`[v0] 💰 Total USD value: $${total.toFixed(2)}`)
-      console.log(`[v0] 📋 Token details:`, deduplicatedTokens.map((t: TokenBalance) => `${t.symbol}: ${t.balance} ($${t.usdValue.toFixed(2)}) on ${t.chain}`))
-      
       // Show tokens grouped by chain
       const tokensByChain = deduplicatedTokens.reduce((acc: Record<string, TokenBalance[]>, token: TokenBalance) => {
         const chain = token.chain || "Unknown"
@@ -644,30 +531,12 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         acc[chain].push(token)
         return acc
       }, {} as Record<string, TokenBalance[]>)
-      
-      console.log(`[v0] 📊 Tokens by chain:`, Object.entries(tokensByChain).map(([chain, tokens]) => 
-        `${chain}: ${(tokens as TokenBalance[]).length} tokens (${(tokens as TokenBalance[]).map((t: TokenBalance) => t.symbol).join(', ')})`
-      ))
-      
+
       // Show L2 tokens specifically
       const l2Tokens = deduplicatedTokens.filter((token: TokenBalance) => token.chain !== "Ethereum")
-      if (l2Tokens.length > 0) {
-        console.log(`[v0] 🚀 L2 tokens found: ${l2Tokens.length} tokens`)
-        l2Tokens.forEach((token: TokenBalance) => {
-          console.log(`[v0] 🚀 L2 Token: ${token.symbol} (${token.balance}) on ${token.chain}`)
-        })
-      } else {
-        console.log(`[v0] ⚠️ No L2 tokens found - checking if L2 detection is working properly`)
-      }
 
       setTokenBalances(deduplicatedTokens)
       setTotalUsdBalance(total)
-
-      console.log("[v0] ✅ Multi-chain token balances updated:", {
-        totalTokens: deduplicatedTokens.length,
-        totalUsdValue: total,
-        chains: [...new Set(deduplicatedTokens.map((t: TokenBalance) => t.chain))].join(", "),
-      })
     } catch (error) {
       console.error("[v0] ❌ Error in fetchAllTokenBalances:", error)
       if (address) {
@@ -702,7 +571,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const getBalanceForChain = async (address: string, chainId: string, rpcUrls: string[]) => {
     for (const rpcUrl of rpcUrls) {
       try {
-        console.log(`[v0] Trying RPC: ${rpcUrl} for chain ${chainId}`)
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout (reduced from 10s)
@@ -724,30 +592,24 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutId)
 
         if (!response.ok) {
-          console.log(`[v0] RPC ${rpcUrl} failed with status: ${response.status}`)
           continue
         }
 
         const data = await response.json()
         if (data.result) {
           const balanceInEth = Number.parseInt(data.result, 16) / Math.pow(10, 18)
-          console.log(`[v0] Successfully got balance from ${rpcUrl}: ${balanceInEth.toFixed(4)}`)
           return balanceInEth.toFixed(4)
         } else if (data.error) {
-          console.log(`[v0] RPC error from ${rpcUrl}:`, data.error)
           continue
         }
       } catch (error) {
         if (error instanceof Error) {
-          console.log(`[v0] Error with RPC ${rpcUrl}:`, error.message)
         } else {
-          console.log(`[v0] Error with RPC ${rpcUrl}:`, error)
         }
         continue
       }
     }
 
-    console.log(`[v0] All RPC endpoints failed for chain ${chainId}, returning 0`)
     return "0.0000"
   }
 
@@ -757,14 +619,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     decimals: number,
     rpcUrls: string[],
   ) => {
-    console.log(`[v0] 🔍 Checking token balance: ${tokenAddress} for wallet: ${walletAddress}`)
     
     for (const rpcUrl of rpcUrls) {
       try {
         const data = `0x70a08231000000000000000000000000${walletAddress.slice(2)}`
-        console.log(`[v0] 📡 Calling RPC: ${rpcUrl}`)
-        console.log(`[v0] 📋 Token address: ${tokenAddress}`)
-        console.log(`[v0] 📋 Call data: ${data}`)
 
         const controller = new AbortController()
         const timeoutId = setTimeout(() => controller.abort(), 3000) // 3 second timeout (reduced from 10s)
@@ -792,28 +650,21 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutId)
 
         if (!response.ok) {
-          console.log(`[v0] Token balance RPC ${rpcUrl} failed with status: ${response.status}`)
           continue
         }
 
         const result = await response.json()
-        console.log(`[v0] 📊 RPC Response for ${tokenAddress}:`, result)
         
         if (result.result && result.result !== "0x") {
           const balance = Number.parseInt(result.result, 16) / Math.pow(10, decimals)
-          console.log(`[v0] ✅ Token balance found: ${balance} ${tokenAddress}`)
           return balance
         } else if (result.error) {
-          console.log(`[v0] ❌ Token balance RPC error from ${rpcUrl}:`, result.error)
           continue
         } else {
-          console.log(`[v0] ⚠️ No balance found for ${tokenAddress} (result: ${result.result})`)
         }
       } catch (error) {
         if (error instanceof Error) {
-          console.log(`[v0] Token balance error with RPC ${rpcUrl}:`, error.message)
         } else {
-          console.log(`[v0] Token balance error with RPC ${rpcUrl}:`, error)
         }
         continue
       }
@@ -824,11 +675,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   // Enhanced cross-chain ERC-20 balance function (GPT suggestion)
   const getErc20BalanceCrossChain = async (tokenAddress: string, walletAddress: string, rpcUrls: string[], decimals: number): Promise<number> => {
-    console.log(`[v0] 🚀 Cross-chain balance check: ${tokenAddress} on ${rpcUrls.length} RPCs`)
     
     for (const rpc of rpcUrls) {
       try {
-        console.log(`[v0] 📡 Trying RPC: ${rpc}`)
         
         const response = await fetch(rpc, {
           method: "POST",
@@ -848,30 +697,25 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         })
 
         if (!response.ok) {
-          console.log(`[v0] ⚠️ RPC ${rpc} failed with status: ${response.status}`)
           continue
         }
 
         const data = await response.json()
         
         if (data.error) {
-          console.log(`[v0] ⚠️ RPC ${rpc} error:`, data.error)
           continue
         }
 
         if (data.result && data.result !== "0x" && data.result !== "0x0") {
           const balanceRaw = BigInt(data.result)
           const balance = Number(balanceRaw) / Math.pow(10, decimals)
-          console.log(`[v0] ✅ Cross-chain balance found: ${balance} via ${rpc}`)
           return balance
         }
       } catch (err) {
-        console.log(`[v0] ⚠️ RPC ${rpc} failed:`, err)
         continue
       }
     }
     
-    console.log(`[v0] ❌ No balance found for ${tokenAddress} across all RPCs`)
     return 0
   }
 
@@ -887,7 +731,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setConnectingWallet(walletType || "default")
 
       if (typeof window !== "undefined") {
-        console.log("[v0] Requesting wallet connection for:", walletType || "default")
 
         let ethereum = providerOverride || window.ethereum
 
@@ -895,7 +738,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         if (!providerOverride) {
           // Handle multiple wallet providers (e.g., Rabby + MetaMask installed together)
           if (window.ethereum?.providers && Array.isArray(window.ethereum.providers)) {
-            console.log("[v0] Multiple providers detected:", window.ethereum.providers.length)
             
             // Find the specific provider based on walletType
             if (walletType === "metamask") {
@@ -904,11 +746,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
                 return p.isMetaMask === true && p.isRabby !== true
               })
               ethereum = metamaskProvider || window.ethereum
-              console.log("[v0] MetaMask provider found:", !!metamaskProvider, { isMetaMask: metamaskProvider?.isMetaMask, isRabby: metamaskProvider?.isRabby })
             } else if (walletType === "rabby") {
               const rabbyProvider = window.ethereum.providers.find((p: any) => p.isRabby === true)
               ethereum = rabbyProvider || window.ethereum
-              console.log("[v0] Rabby provider found:", !!rabbyProvider, { isMetaMask: rabbyProvider?.isMetaMask, isRabby: rabbyProvider?.isRabby })
             } else if (walletType === "coinbase") {
               ethereum = window.ethereum.providers.find((p: any) => p.isCoinbaseWallet) || window.ethereum
             } else if (walletType === "brave") {
@@ -940,25 +780,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           throw new Error("No wallet detected. Please install a Web3 wallet.")
         }
 
-        console.log("[v0] Using provider:", {
-          walletType,
-          isMetaMask: ethereum.isMetaMask,
-          isRabby: ethereum.isRabby,
-          isCoinbase: ethereum.isCoinbaseWallet,
-          isBrave: ethereum.isBraveWallet,
-          providerOverride: !!providerOverride
-        })
-        
-        // Log all available providers for debugging
-        if (window.ethereum?.providers) {
-          console.log("[v0] All available providers:", window.ethereum.providers.map((p: any) => ({
-            isMetaMask: p.isMetaMask,
-            isRabby: p.isRabby,
-            isBrave: p.isBraveWallet,
-            isCoinbase: p.isCoinbaseWallet,
-          })))
-        }
-
         // Force fresh authentication by checking and clearing existing permissions
         try {
           // Check if wallet already has permissions
@@ -967,20 +788,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           })
           
           if (permissions && permissions.length > 0) {
-            console.log("[v0] ⚠️ Wallet already has permissions - forcing fresh authentication")
             // Try to revoke existing permissions to force fresh auth
             try {
               await ethereum.request({
                 method: "wallet_revokePermissions",
                 params: [{ eth_accounts: {} }]
               })
-              console.log("[v0] ✅ Revoked existing permissions - fresh auth required")
             } catch (revokeError) {
-              console.log("[v0] Could not revoke permissions, proceeding with fresh request")
             }
           }
         } catch (e) {
-          console.log("[v0] No existing permissions or error checking permissions:", e)
         }
 
         // Request accounts from the wallet - this should always prompt for user consent
@@ -1008,35 +825,23 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           // Check in order of specificity (most specific first)
           if (ethereum.isRabby === true) {
             detectedWallet = "rabby"
-            console.log('[v0] ✅ Detected: RABBY', { isRabby: ethereum.isRabby, isMetaMask: ethereum.isMetaMask })
           } else if (ethereum.isBraveWallet === true && ethereum.isMetaMask !== true) {
             detectedWallet = "brave"
-            console.log('[v0] ✅ Detected: BRAVE')
           } else if (ethereum.isCoinbaseWallet === true || ethereum.isCoinbaseBrowser === true) {
             detectedWallet = "coinbase"
-            console.log('[v0] ✅ Detected: COINBASE')
           } else if (ethereum.isOkxWallet === true) {
             detectedWallet = "okx"
-            console.log('[v0] ✅ Detected: OKX')
           } else if (ethereum.isTrust === true) {
             detectedWallet = "trust"
-            console.log('[v0] ✅ Detected: TRUST')
           } else if (ethereum.isZerion === true) {
             detectedWallet = "zerion"
-            console.log('[v0] ✅ Detected: ZERION')
           } else if (ethereum.isMetaMask === true && ethereum.isRabby !== true) {
             // Only MetaMask if has isMetaMask but NOT isRabby
             detectedWallet = "metamask"
-            console.log('[v0] ✅ Detected: METAMASK', { isRabby: ethereum.isRabby, isMetaMask: ethereum.isMetaMask })
           } else {
             detectedWallet = "injected"
-            console.log('[v0] ⚠️ Detected: UNKNOWN/INJECTED')
           }
           
-          console.log('[v0] 🎯 FINAL RESULT:')
-          console.log('[v0]   - Requested:', walletType)
-          console.log('[v0]   - Detected:', detectedWallet)
-          console.log('[v0]   - Match:', walletType === detectedWallet ? '✅ YES' : '❌ NO')
           setConnectedWallet(detectedWallet)
 
           await fetchAllTokenBalances(account, cId)
@@ -1045,7 +850,6 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
           startInactivityTimer()
           updateActivity()
 
-          console.log("[v0] Wallet connected:", { account, cId, bal, wallet: detectedWallet })
         }
       }
     } catch (error) {
@@ -1098,10 +902,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       }
       keysToRemove.forEach(key => localStorage.removeItem(key))
     } catch (e) {
-      console.warn("[v0] Unable to clear wallet data from localStorage:", e)
     }
     
-    console.log("[v0] Wallet disconnected - all data cleared and permissions revoked")
   }
 
   const switchNetwork = async (targetChainId: string) => {
@@ -1135,12 +937,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // No session restoration - wallet connections are temporary
-    console.log("[v0] 🚀 Wallet provider initialized - no cached sessions")
 
     if (typeof window !== "undefined" && window.ethereum) {
       const handleAccountsChanged = (accounts: string[]) => {
         if (accounts.length === 0) {
-          console.log("[v0] 🔌 Wallet disconnected by user - clearing all data")
           disconnect()
         } else {
           setAddress(accounts[0])

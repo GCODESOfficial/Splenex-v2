@@ -36,11 +36,8 @@ export async function getTokenMetadataByAddress(
   const cached = metadataCache.get(cacheKey);
   
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    console.log(`[Token Metadata] ⚡ Cache hit for ${address}`);
     return cached.data;
   }
-
-  console.log(`[Token Metadata] 🔍 Fetching metadata for ${address} on chain ${chainId}...`);
 
   // Try all sources in parallel for maximum speed
   const sources = await Promise.allSettled([
@@ -58,12 +55,10 @@ export async function getTokenMetadataByAddress(
       const metadata = source.value;
       // Cache the result
       metadataCache.set(cacheKey, { data: metadata, timestamp: Date.now() });
-      console.log(`[Token Metadata] ✅ Found via ${metadata.source || 'unknown'}: ${metadata.symbol}`);
       return metadata;
     }
   }
 
-  console.log(`[Token Metadata] ❌ No metadata found for ${address}`);
   return null;
 }
 
@@ -141,7 +136,6 @@ async function fetchFromDexScreener(
       source: 'dexscreener',
     } as TokenMetadata & { source: string };
   } catch (error) {
-    console.warn(`[Token Metadata] DexScreener error:`, error);
     return null;
   }
 }
@@ -205,7 +199,6 @@ async function fetchFromMoralis(
       source: 'moralis',
     } as TokenMetadata & { source: string };
   } catch (error) {
-    console.warn(`[Token Metadata] Moralis error:`, error);
     return null;
   }
 }
@@ -309,7 +302,6 @@ export async function fastTokenSearch(
 
   // If it's a contract address, query DexScreener directly
   if (isContractAddress(query)) {
-    console.log(`[Fast Search] 🔍 Detected contract address: ${query}`);
     
     // Try all chains if no chainId specified
     const chainsToSearch = chainId 
@@ -326,7 +318,6 @@ export async function fastTokenSearch(
     const found = results.filter((r): r is TokenMetadata => r !== null);
     
     if (found.length > 0) {
-      console.log(`[Fast Search] ✅ Found ${found.length} token(s) for address ${query}`);
       return found;
     }
   }

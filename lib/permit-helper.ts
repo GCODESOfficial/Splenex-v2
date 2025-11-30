@@ -31,15 +31,9 @@ export async function getPermitSignature(
   provider: any
 ): Promise<PermitData | null> {
   try {
-    console.log("[Permit] 🎯 Getting ERC20 Permit signature...");
-    console.log("[Permit] Token:", tokenName, tokenSymbol);
-    console.log("[Permit] Owner:", owner);
-    console.log("[Permit] Spender:", spender);
-    console.log("[Permit] Value:", value);
 
     // Ensure value is a proper integer string (no scientific notation)
     const valueBigInt = BigInt(value).toString();
-    console.log("[Permit] Value (formatted):", valueBigInt);
 
     // Get current nonce for permit
     const nonce = await getPermitNonce(tokenAddress, owner, provider);
@@ -74,12 +68,6 @@ export async function getPermitSignature(
       deadline: deadline.toString(),
     };
 
-    console.log("[Permit] 📝 Requesting EIP-712 signature...");
-    console.log("[Permit] 💡 This is a secure permit signature for token approval");
-    console.log("[Permit] 🔒 Spender:", spender);
-    console.log("[Permit] 💰 Amount:", valueBigInt);
-    console.log("[Permit] ⏰ Deadline:", new Date(deadline * 1000).toISOString());
-
     // Sign using EIP-712
     const signature = await provider.request({
       method: "eth_signTypedData_v4",
@@ -93,8 +81,6 @@ export async function getPermitSignature(
         }),
       ],
     });
-
-    console.log("[Permit] ✅ Permit signature obtained!");
 
     // Split signature into v, r, s
     const r = signature.slice(0, 66);
@@ -140,10 +126,8 @@ async function getPermitNonce(
     });
 
     const nonce = parseInt(result, 16);
-    console.log("[Permit] Current nonce:", nonce);
     return nonce.toString();
   } catch (error) {
-    console.warn("[Permit] Could not get nonce, using 0:", error);
     return "0";
   }
 }
@@ -170,7 +154,6 @@ export async function supportsPermit(
     
     return true;
   } catch (error) {
-    console.log("[Permit] Token does not support ERC20 Permit");
     return false;
   }
 }

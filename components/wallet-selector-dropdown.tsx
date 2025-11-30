@@ -37,11 +37,8 @@ const WalletIcon = ({ walletType, className = "w-5 h-5" }: { walletType?: string
   const logoUrl = WALLET_ICONS[walletType.toLowerCase()]
   
   if (!logoUrl) {
-    console.log('[WalletIcon] No logo URL found for wallet type:', walletType)
     return null
   }
-
-  console.log('[WalletIcon] Rendering icon for:', walletType, 'URL:', logoUrl)
 
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -49,9 +46,8 @@ const WalletIcon = ({ walletType, className = "w-5 h-5" }: { walletType?: string
       src={logoUrl}
       alt={`${walletType} logo`}
       className={`${className} object-contain`}
-      onLoad={() => console.log('[WalletIcon] ✅ Successfully loaded:', walletType)}
+      onLoad={() => {}}
       onError={(e) => {
-        console.error(`[WalletIcon] ❌ FAILED to load ${walletType} from ${logoUrl}`)
         e.currentTarget.style.display = 'none'
       }}
     />
@@ -66,16 +62,13 @@ export function WalletSelectorDropdown({
   isSecondaryWallet = false 
 }: WalletSelectorDropdownProps) {
   const { disconnectSecondary } = useSecondaryWallet()
-  
-  console.log('[WalletSelectorDropdown] Received props:', { address, walletType, isSecondaryWallet })
-  
+
   const formatAddress = (addr: string) => {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`
   }
 
   const handleDisconnect = () => {
     if (isSecondaryWallet) {
-      console.log('[WalletSelectorDropdown] 🔌 Disconnecting secondary wallet')
       disconnectSecondary()
     }
   }

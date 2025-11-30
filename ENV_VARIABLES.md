@@ -34,6 +34,16 @@ POLYGON_RPC_URL=https://polygon-rpc.com
 LIFI_API_KEY=your_lifi_api_key_here
 ```
 
+### Moralis API Key (required - for token balance fetching)
+```bash
+MORALIS_API_KEY=your_moralis_api_key_here
+```
+**Why this matters:**
+- Moralis is used to fetch wallet token balances across all supported chains
+- Get your API key from https://moralis.io
+- This is a server-side only variable (no NEXT_PUBLIC_ prefix needed)
+- **Important:** After adding this to your .env file, restart your Next.js dev server
+
 ### Executor Private Key (server-side only)
 ```bash
 EXECUTOR_PRIVATE_KEY=your_executor_private_key_here
@@ -62,6 +72,9 @@ POLYGON_RPC_URL=https://polygon-rpc.com
 
 # LiFi API Key (optional - for advanced routing)
 LIFI_API_KEY=your_lifi_api_key_here
+
+# Moralis API Key (required - for token balance fetching)
+MORALIS_API_KEY=your_moralis_api_key_here
 
 # Executor Private Key (server-side only - for limit order execution)
 EXECUTOR_PRIVATE_KEY=your_executor_private_key_here

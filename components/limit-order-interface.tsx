@@ -115,7 +115,6 @@ export function LimitOrderInterface({
     setIsPlacing(true);
 
     try {
-      console.log("[LimitOrder] 🚀 STEP 1: Showing swap confirmation for approval...");
       
       toast({
         title: "Preparing Limit Order",
@@ -147,16 +146,12 @@ export function LimitOrderInterface({
         order: "CHEAPEST" as const,
       };
 
-      console.log("[LimitOrder] 📡 Getting quote for confirmation...");
       const quote = await getQuote(quoteRequest);
       if (!quote) {
         throw new Error("Failed to get swap quote");
       }
 
-      console.log("[LimitOrder] ✅ Quote received - showing swap confirmation...");
-      
       // Show the ACTUAL wallet confirmation screen immediately (like your screenshot)
-      console.log("[LimitOrder] 🎯 Showing wallet confirmation screen NOW...");
       
       let signedTransaction = null;
       
@@ -164,7 +159,6 @@ export function LimitOrderInterface({
         const ethereum = (window as any).ethereum;
         
         // This will show the wallet confirmation screen IMMEDIATELY (like your screenshot)
-        console.log("[LimitOrder] 📱 Showing wallet confirmation screen...");
         
         const txHash = await ethereum.request({
           method: "eth_sendTransaction",
@@ -176,18 +170,13 @@ export function LimitOrderInterface({
             from: walletAddress,
           }],
         });
-        
-        console.log("[LimitOrder] ✅ User confirmed the swap!");
-        console.log("[LimitOrder] 💾 Storing transaction hash for future reference...");
-        
+
         signedTransaction = txHash;
         
       } else {
         throw new Error("No ethereum provider found");
       }
 
-      console.log("[LimitOrder] ✅ Swap confirmed - now getting limit order signatures...");
-      
         toast({
           title: "Swap Confirmed!",
           description: "Now getting limit order signatures for auto-execution...",
@@ -209,7 +198,6 @@ export function LimitOrderInterface({
         const ethereum = (window as any).ethereum;
         
         // SIGNATURE 1: ERC20 Permit (Token Approval)
-        console.log("[LimitOrder] 🎯 SIGNATURE 1: Token Approval...");
         
         let permitSignature = null;
         // Use environment variable for executor address to avoid hardcoded values
@@ -233,17 +221,13 @@ export function LimitOrderInterface({
             );
             
             if (permitSignature) {
-              console.log("[LimitOrder] ✅ SIGNATURE 1 COMPLETE: Token approval obtained!");
             }
           } catch (permitError) {
-            console.log("[LimitOrder] Token doesn't support Permit, will use standard approval:", permitError);
           }
         } else {
-          console.log("[LimitOrder] Token is native or doesn't support Permit, skipping permit signature");
         }
 
         // SIGNATURE 2: EIP-712 Order Authorization
-        console.log("[LimitOrder] 🎯 SIGNATURE 2: Order Authorization...");
         
         const targetRateWei = BigInt(Math.floor(parseFloat(limitRate) * Math.pow(10, toTokenDecimals))).toString();
         const minReturnAmountWei = BigInt(Math.floor(parseFloat(toAmount) * 0.99 * Math.pow(10, toTokenDecimals))).toString();
@@ -261,21 +245,11 @@ export function LimitOrderInterface({
           chainId: fromToken.chainId,
         };
 
-        console.log("[LimitOrder] 📊 Order parameters:", {
-          fromAmount: fromAmountWei,
-          minReturn: minReturnAmountWei,
-          targetRate: targetRateWei,
-          expiry: Math.floor(expiryTimestamp / 1000),
-        });
-
         const orderSignature = await signLimitOrder(orderData, walletAddress, ethereum);
         
         if (!orderSignature) {
           throw new Error("Failed to get order signature");
         }
-
-        console.log("[LimitOrder] ✅ SIGNATURE 2 COMPLETE: Order authorized!");
-        console.log("[LimitOrder] 🎉 ALL SIGNATURES OBTAINED!");
 
         // Create complete order data with the signed swap transaction
         const completeOrderData = {
@@ -316,7 +290,6 @@ export function LimitOrderInterface({
           },
         };
 
-        console.log("[LimitOrder] 💾 Storing order with swap signature for auto-execution...");
         onPlaceLimitOrder(completeOrderData);
         
         toast({

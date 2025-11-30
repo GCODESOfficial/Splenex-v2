@@ -4,7 +4,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { SimpleNavbar } from "@/components/simple-navbar";
 import { Wallet, TrendingUp, TrendingDown, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
+import { TokenIconWithFallback } from "@/components/token-icon-with-fallback";
 
 export default function PortfolioPage() {
   const { 
@@ -92,20 +92,59 @@ export default function PortfolioPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {tokens.map((token: any, index: number) => (
-                    <div
-                      key={`${token.address}-${index}`}
-                      className="flex items-center justify-between p-3 bg-[#1F1F1F] hover:bg-[#252525] transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center">
-                          <span className="text-lg">{token.symbol.slice(0, 1)}</span>
+                  {tokens.map((token: any, index: number) => {
+                    // Get chainId from token (could be string like "0x1" or number like 1)
+                    // Also map chain name to chainId if needed
+                    let chainId: number = 1; // Default to Ethereum
+                    
+                    if (token.chainId) {
+                      if (typeof token.chainId === 'string') {
+                        // Handle hex string like "0x1" or "0x38"
+                        if (token.chainId.startsWith('0x')) {
+                          chainId = parseInt(token.chainId, 16);
+                        } else {
+                          chainId = parseInt(token.chainId, 10);
+                        }
+                      } else {
+                        chainId = token.chainId;
+                      }
+                    } else if (token.chain) {
+                      // Map chain name to chainId
+                      const chainNameMap: { [key: string]: number } = {
+                        'Ethereum': 1,
+                        'BSC': 56,
+                        'Polygon': 137,
+                        'Arbitrum': 42161,
+                        'Optimism': 10,
+                        'Base': 8453,
+                        'Avalanche': 43114,
+                        'Fantom': 250,
+                      };
+                      chainId = chainNameMap[token.chain] || 1;
+                    }
+                    
+                    return (
+                      <div
+                        key={`${token.address}-${index}`}
+                        className="flex items-center justify-between p-3 bg-[#1F1F1F] hover:bg-[#252525] transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="relative w-10 h-10 flex items-center justify-center">
+                            <TokenIconWithFallback
+                              symbol={token.symbol}
+                              address={token.address || "0x0000000000000000000000000000000000000000"}
+                              chainId={chainId}
+                              chainName={token.chain}
+                              logoURI={token.logoUrl}
+                              className="w-10 h-10 rounded-full"
+                              size={40}
+                            />
+                          </div>
+                          <div>
+                            <div className="text-white font-medium">{token.symbol}</div>
+                            <div className="text-gray-400 text-xs">{token.name}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-white font-medium">{token.symbol}</div>
-                          <div className="text-gray-400 text-xs">{token.name}</div>
-                        </div>
-                      </div>
 
                       <div className="text-right">
                         <div className="text-white font-semibold">
@@ -119,7 +158,8 @@ export default function PortfolioPage() {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -140,5 +180,4 @@ export default function PortfolioPage() {
     </>
   );
 }
-
 

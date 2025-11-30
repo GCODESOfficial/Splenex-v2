@@ -20,19 +20,14 @@ export function useSwapVolume() {
         const response = await fetch("/api/analytics");
         
         if (!response.ok) {
-          console.warn("[Volume] ⚠️ API request failed:", response.status);
           return;
         }
 
         const data = await response.json();
 
         if (!data || !Array.isArray(data) || data.length === 0) {
-          console.log("[Volume] ℹ️ No swap data in database yet");
           return;
         }
-
-        console.log("[Volume] 📊 Raw data from database:", data);
-        console.log("[Volume] 🔍 Available columns:", Object.keys(data[0] || {}));
 
         // Calculate volume with flexible column names
         const grouped: Record<string, number> = {};
@@ -83,15 +78,8 @@ export function useSwapVolume() {
             last24Cnt += 1;
           }
         });
-        
-        console.log(`[Volume] 💰 Total Volume: $${total.toFixed(2)}`);
-        console.log(`[Volume] 📅 Today (${todayStr}): $${todayVol.toFixed(2)}`);
-        console.log(`[Volume] 📅 Yesterday (${yesterdayStr}): $${yesterdayVol.toFixed(2)}`);
-        console.log(`[Volume] 🕐 Last 24 Hours Volume: $${last24Vol.toFixed(2)}, Count: ${last24Cnt}`);
-        console.log(`[Volume] 📊 Daily data:`, Object.entries(grouped).slice(0, 7));
-        
+
         const percentage = yesterdayVol > 0 ? ((todayVol - yesterdayVol) / yesterdayVol) * 100 : 0;
-        console.log(`[Volume] 📈 Percentage change: ${percentage >= 0 ? '+' : ''}${percentage.toFixed(1)}%`);
         
         setTotalVolume(total);
         setYesterdayVolume(yesterdayVol);
@@ -99,7 +87,6 @@ export function useSwapVolume() {
         setLast24HoursVolume(last24Vol);
         setLast24HoursCount(last24Cnt);
       } catch (err) {
-        console.warn("[Volume] ⚠️ Error in fetchVolume:", err);
       } finally {
         setIsLoading(false);
       }

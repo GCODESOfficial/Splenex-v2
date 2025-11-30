@@ -59,13 +59,11 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
   // Fetch token balances for secondary wallet (using same API as primary wallet)
   const fetchSecondaryBalances = async (walletAddress: string) => {
     try {
-      console.log("[SecondaryWallet] 📊 Fetching balances for:", walletAddress)
       
       // Call the same API endpoint that primary wallet uses
       const response = await fetch(`/api/tokens?address=${walletAddress}&chain=eth`)
       
       if (!response.ok) {
-        console.warn("[SecondaryWallet] ⚠️ Balance fetch failed:", response.status)
         return
       }
 
@@ -92,7 +90,6 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
         setSecondaryTokenBalances(tokenBalances)
         setSecondaryTotalUsdBalance(totalUsd)
 
-        console.log("[SecondaryWallet] ✅ Balances updated:", tokenBalances.length, "tokens")
       }
     } catch (error) {
       console.error("[SecondaryWallet] ❌ Error fetching balances:", error)
@@ -108,7 +105,6 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
   const connectSecondaryWallet = async (walletType?: string, providerOverride?: any) => {
     try {
       setIsSecondaryConnecting(true)
-      console.log("[SecondaryWallet] 🔗 Connecting secondary wallet:", walletType || "default")
 
       if (typeof window === "undefined") {
         throw new Error("Window not available")
@@ -120,7 +116,6 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
       if (!providerOverride) {
         // Handle multiple wallet providers
         if (window.ethereum?.providers && Array.isArray(window.ethereum.providers)) {
-          console.log("[SecondaryWallet] Multiple providers detected:", window.ethereum.providers.length)
           
           if (walletType === "metamask") {
             const metamaskProvider = window.ethereum.providers.find((p: any) => {
@@ -148,14 +143,6 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
         throw new Error("No wallet detected. Please install a Web3 wallet.")
       }
 
-      console.log("[SecondaryWallet] Using provider:", {
-        walletType,
-        isMetaMask: ethereum.isMetaMask,
-        isRabby: ethereum.isRabby,
-        isCoinbase: ethereum.isCoinbaseWallet,
-        isBrave: ethereum.isBraveWallet,
-      })
-
       // Force fresh authentication by checking and clearing existing permissions
       try {
         // Check if wallet already has permissions
@@ -164,20 +151,16 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
         })
         
         if (permissions && permissions.length > 0) {
-          console.log("[SecondaryWallet] ⚠️ Wallet already has permissions - forcing fresh authentication")
           // Try to revoke existing permissions to force fresh auth
           try {
             await ethereum.request({
               method: "wallet_revokePermissions",
               params: [{ eth_accounts: {} }]
             })
-            console.log("[SecondaryWallet] ✅ Revoked existing permissions - fresh auth required")
           } catch (revokeError) {
-            console.log("[SecondaryWallet] Could not revoke permissions, proceeding with fresh request")
           }
         }
       } catch (e) {
-        console.log("[SecondaryWallet] No existing permissions or error checking permissions:", e)
       }
 
       // Request accounts from the wallet - this should always prompt for user consent
@@ -199,8 +182,6 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
         // Detect actual wallet type from provider
         const detectedWallet = detectSecondaryWallet(ethereum)
         setSecondaryWalletType(detectedWallet)
-
-        console.log("[SecondaryWallet] ✅ Connected:", { account, cId, wallet: detectedWallet })
 
         // Fetch balances for the connected wallet
         await fetchSecondaryBalances(account)
@@ -249,15 +230,12 @@ export function SecondaryWalletProvider({ children }: { children: React.ReactNod
       }
       keysToRemove.forEach(key => localStorage.removeItem(key))
     } catch (e) {
-      console.warn("[SecondaryWallet] Unable to clear secondary wallet data from localStorage:", e)
     }
     
-    console.log("[SecondaryWallet] 🔌 Disconnected - all data cleared and permissions revoked")
   }
 
   // No session restoration - secondary wallet connections are temporary
   useEffect(() => {
-    console.log("[SecondaryWallet] 🚀 Secondary wallet provider initialized - no cached sessions")
   }, [])
 
   const value: SecondaryWalletContextType = {

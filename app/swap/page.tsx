@@ -14,7 +14,6 @@ export default function HomePage() {
 
       <SimpleSwapInterface />
 
-      
       {/* <SimpleNavbar /> */}
       {/* <main className="pt-20">
         <div className="max-w-7xl mx-auto p-4">

@@ -52,7 +52,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
 
     try {
       if (showLoading) setIsLoading(true)
-      console.log("[OngoingOrders] Fetching orders for wallet:", walletAddress)
 
       const { data, error } = await supabase
         .from("limit_orders")
@@ -83,7 +82,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
           message: order.message,
         }))
 
-        console.log(`[OngoingOrders] Found ${formattedOrders.length} orders`)
         setOrders(formattedOrders)
         setIsInitialLoad(false)
       }
@@ -109,13 +107,11 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
   // Execute ready order automatically
   const executeReadyOrder = async (order: any) => {
     if (executingOrders.has(order.id)) {
-      console.log("[OngoingOrders] Order already executing:", order.id)
       return
     }
 
     try {
       setExecutingOrders(prev => new Set(prev).add(order.id))
-      console.log("[OngoingOrders] 🚀 Executing order:", order.id)
       
       // Get the full order data including pre-signed transaction
       const { data: orderData, error: fetchError } = await supabase
@@ -125,7 +121,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
         .single()
 
       if (fetchError || !orderData) {
-        console.log("[OngoingOrders] Could not fetch order data")
         setExecutingOrders(prev => {
           const next = new Set(prev)
           next.delete(order.id)
@@ -140,8 +135,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
         
         // Method 1: Try pre-signed transaction (ZERO POPUPS!)
         if (orderData.presigned_transaction) {
-          console.log("[OngoingOrders] 🚀 Using PRE-SIGNED transaction!")
-          console.log("[OngoingOrders] ⚡ Broadcasting silently...")
 
           try {
             txHash = await ethereum.request({
@@ -149,16 +142,13 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
               params: [orderData.presigned_transaction],
             })
 
-            console.log("[OngoingOrders] 🎉 PRE-SIGNED transaction broadcast - ZERO POPUPS!")
           } catch (rawTxError) {
-            console.warn("[OngoingOrders] Pre-signed tx failed, using standard method:", rawTxError)
             txHash = null
           }
         }
 
         // Method 2: Standard execution with quote
         if (!txHash) {
-          console.log("[OngoingOrders] 📤 Using standard execution...")
           
           if (!orderData.execution_quote) {
             throw new Error("No execution quote available")
@@ -177,8 +167,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
             }],
           })
         }
-
-        console.log("[OngoingOrders] ✅ Transaction sent:", txHash)
 
         // Update order status to executed
         await supabase
@@ -225,12 +213,9 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
 
         if (error || !data || data.length === 0) return
 
-        console.log(`[OngoingOrders] 🎯 Found ${data.length} ready order(s) for execution`)
-
         // Execute each ready order
         for (const order of data) {
           if (!executingOrders.has(order.id)) {
-            console.log(`[OngoingOrders] 🚀 Conditions met! Auto-executing order ${order.id}`)
             executeReadyOrder({
               id: order.id,
               walletAddress: order.wallet_address,
@@ -255,7 +240,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
   // Cancel order
   const handleCancelOrder = async (orderId: string) => {
     try {
-      console.log("[OngoingOrders] Cancelling order:", orderId)
 
       const { error } = await supabase
         .from("limit_orders")
@@ -268,7 +252,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
         return
       }
 
-      console.log("[OngoingOrders] Order cancelled successfully")
       fetchOrders()
       onRefresh?.()
     } catch (error) {
@@ -280,7 +263,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
   // Remove expired order from list
   const handleRemoveExpiredOrder = async (orderId: string) => {
     try {
-      console.log("[OngoingOrders] Removing expired order:", orderId)
 
       // Delete the order from database
       const { error } = await supabase
@@ -294,7 +276,6 @@ export function OngoingLimitOrders({ walletAddress, onRefresh }: OngoingLimitOrd
         return
       }
 
-      console.log("[OngoingOrders] Expired order removed successfully")
       fetchOrders()
       onRefresh?.()
     } catch (error) {

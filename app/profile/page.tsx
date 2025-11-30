@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @next/next/no-img-element */
 "use client"
 
 import { useWallet } from "@/hooks/use-wallet"
 import { useEffect, useState, useRef, useMemo } from "react"
 import Link from "next/link"
+import { TokenIconWithFallback } from "@/components/token-icon-with-fallback"
 
 export default function ProfilePage() {
   const { totalUsdBalance, tokenBalances, isConnected, isLoadingBalances } = useWallet()
@@ -143,30 +143,58 @@ export default function ProfilePage() {
                 <span className="text-right">Balance</span>
               </div>
 
-              {tokens.map((token, i) => (
-                <div
-                  key={`${token.address}-${token.chain}-${i}`}
-                  className="grid grid-cols-3 items-center px-6 py-3 border-b border-[#1E1E1E] hover:bg-[#191919] transition-colors"
-                >
-                  {/* TOKEN INFO */}
-                  <div className="flex items-center gap-3">
-                    <img
-                      src={
-                        (token as any).logoUrl ||
-                        (token as any).logoURI ||
-                        `https://raw.githubusercontent.com/spothq/cryptocurrency-icons/master/128/color/${token.symbol?.toLowerCase()}.png`
-                      }
-                      alt={token.symbol}
-                      className="w-6 h-6 rounded-full"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none"
-                      }}
-                    />
-                    <div>
-                      <div className="text-white text-sm font-medium">{token.symbol}</div>
-                      <div className="text-gray-500 text-xs">{token.name}</div>
+              {tokens.map((token, i) => {
+                // Get chainId from token (could be string like "0x1" or number like 1)
+                let chainId: number = 1; // Default to Ethereum
+                
+                if (token.chainId) {
+                  if (typeof token.chainId === 'string') {
+                    // Handle hex string like "0x1" or "0x38"
+                    if (token.chainId.startsWith('0x')) {
+                      chainId = parseInt(token.chainId, 16);
+                    } else {
+                      chainId = parseInt(token.chainId, 10);
+                    }
+                  } else {
+                    chainId = token.chainId;
+                  }
+                } else if (token.chain) {
+                  // Map chain name to chainId
+                  const chainNameMap: { [key: string]: number } = {
+                    'Ethereum': 1,
+                    'BSC': 56,
+                    'Binance': 56,
+                    'Polygon': 137,
+                    'Arbitrum': 42161,
+                    'Optimism': 10,
+                    'Base': 8453,
+                    'Avalanche': 43114,
+                    'Fantom': 250,
+                  };
+                  chainId = chainNameMap[token.chain] || 1;
+                }
+                
+                return (
+                  <div
+                    key={`${token.address}-${token.chain}-${i}`}
+                    className="grid grid-cols-3 items-center px-6 py-3 border-b border-[#1E1E1E] hover:bg-[#191919] transition-colors"
+                  >
+                    {/* TOKEN INFO */}
+                    <div className="flex items-center gap-3">
+                      <TokenIconWithFallback
+                        symbol={token.symbol}
+                        address={token.address || "0x0000000000000000000000000000000000000000"}
+                        chainId={chainId}
+                        chainName={token.chain}
+                        logoURI={(token as any).logoUrl || (token as any).logoURI}
+                        className="w-6 h-6 rounded-full"
+                        size={24}
+                      />
+                      <div>
+                        <div className="text-white text-sm font-medium">{token.symbol}</div>
+                        <div className="text-gray-500 text-xs">{token.name}</div>
+                      </div>
                     </div>
-                  </div>
 
                   {/* PRICE / 24H CHANGE */}
                   <div className="text-sm">
@@ -189,7 +217,8 @@ export default function ProfilePage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </section>
           ))
         ) : (

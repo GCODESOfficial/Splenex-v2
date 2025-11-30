@@ -66,6 +66,8 @@ export default function Sidebar({
               alt="logo collapsed"
               width={24}
               height={24}
+              style={{ width: "auto", height: "auto" }}
+              priority
             />
           ) : (
             <Image
@@ -73,6 +75,8 @@ export default function Sidebar({
               alt="logo expanded"
               width={130}
               height={28}
+              style={{ width: "auto", height: "auto" }}
+              priority
             />
           )}
         </div>
@@ -127,6 +131,7 @@ export default function Sidebar({
                   className={`mr-3 ${
                     isActive ? "brightness-0" : "brightness-100"
                   }`}
+                  style={{ width: "auto", height: "auto" }}
                 />
 
                 {!collapsed && (
@@ -151,7 +156,13 @@ export default function Sidebar({
         }`}
       >
         <div className="flex justify-between items-center p-4">
-          <Image src="/images/logo.svg" alt="logo" width={100} height={24} />
+          <Image 
+            src="/images/logo.svg" 
+            alt="logo" 
+            width={100} 
+            height={24} 
+            style={{ width: "auto", height: "auto" }}
+          />
           <button onClick={onClose} className="text-[#FCD404] text-2xl">
             ✕
           </button>
@@ -177,6 +188,7 @@ export default function Sidebar({
                   className={`mr-3 ${
                     isActive ? "brightness-0" : "brightness-100"
                   }`}
+                  style={{ width: "auto", height: "auto" }}
                 />
                 <span>{item.name}</span>
               </Link>

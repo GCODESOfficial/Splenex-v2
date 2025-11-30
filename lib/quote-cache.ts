@@ -34,7 +34,6 @@ export function getCachedQuote(request: any): any | null {
     return null;
   }
   
-  console.log(`[Quote Cache] ⚡ Cache hit for ${cacheKey.substring(0, 50)}...`);
   return cached.data;
 }
 
@@ -50,9 +49,7 @@ export function setCachedQuote(request: any, quote: any): void {
     timestamp: now,
     expiresAt: now + CACHE_DURATION,
   });
-  
-  console.log(`[Quote Cache] 💾 Cached quote for ${cacheKey.substring(0, 50)}... (expires in 5s)`);
-  
+
   // Clean up expired entries periodically
   if (quoteCache.size > 100) {
     cleanExpiredCache();
@@ -74,7 +71,6 @@ function cleanExpiredCache(): void {
   }
   
   if (cleaned > 0) {
-    console.log(`[Quote Cache] 🧹 Cleaned ${cleaned} expired entries`);
   }
 }
 
@@ -83,7 +79,6 @@ function cleanExpiredCache(): void {
  */
 export function clearQuoteCache(): void {
   quoteCache.clear();
-  console.log("[Quote Cache] 🗑️ Cleared all cached quotes");
 }
 
 /**

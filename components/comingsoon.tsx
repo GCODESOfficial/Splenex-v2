@@ -15,7 +15,6 @@ export default function ComingSoon() {
       try {
         // Fetch all supported chains from LiFi (includes chains from all aggregators)
         const supportedChains = await getChains()
-        console.log(`[ComingSoon] ✅ Loaded ${supportedChains.length} chains`)
         setChains(supportedChains)
       } catch (error) {
         console.error("Failed to fetch chains:", error)
@@ -25,7 +24,6 @@ export default function ComingSoon() {
     }
     fetchChains()
   }, [])
-
 
   return (
     <section className="flex items-center justify-center h-full mt-4 md:mt-0">

@@ -146,23 +146,17 @@ class CovalentGoldRushService {
 
     try {
       const covalentChainName = this.getCovalentChainName(chainName)
-      
-      console.log(`[CovalentGoldRush] 📡 Fetching ALL token balances for ${walletAddress} on ${covalentChainName}`)
 
       // Use direct API call to Covalent balances_v2 endpoint
       // This endpoint returns ALL tokens in the wallet, not just popular ones
       const url = `https://api.covalenthq.com/v1/${covalentChainName}/address/${walletAddress}/balances_v2/?key=${this.apiKey}&quote-currency=${quoteCurrency}&no-spam=${noSpam}&nft=false`
-      
-      console.log(`[CovalentGoldRush] API URL: https://api.covalenthq.com/v1/${covalentChainName}/address/${walletAddress}/balances_v2/`)
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
         }
       })
-
-      console.log(`[CovalentGoldRush] Response status: ${response.status}`)
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'Unknown error')
@@ -173,11 +167,8 @@ class CovalentGoldRushService {
       const data = await response.json()
 
       if (!data.data?.items || data.data.items.length === 0) {
-        console.log(`[CovalentGoldRush] ℹ️ No tokens found for ${walletAddress} on ${covalentChainName}`)
         return []
       }
-
-      console.log(`[CovalentGoldRush] ✅ Found ${data.data.items.length} raw tokens from API`)
 
       // Convert to our format
       // IMPORTANT: We fetch ALL tokens returned by Covalent - they already return complete token list
@@ -186,9 +177,6 @@ class CovalentGoldRushService {
         .map((token: CovalentTokenBalance) => this.convertTokenBalance(token, chainName))
         .filter((token: TokenBalance) => parseFloat(token.balance) > 0) // Only include tokens with balance > 0
 
-      console.log(`[CovalentGoldRush] ✅ Returning ${tokens.length} tokens (ALL tokens with balance > 0)`)
-      console.log(`[CovalentGoldRush] 📋 Token list:`, tokens.map((t: TokenBalance) => `${t.symbol} (${t.balance})`))
-      
       return tokens
 
     } catch (error) {

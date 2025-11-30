@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client"
 
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 
@@ -29,9 +29,11 @@ export function ConnectingModal({ open, onOpenChange, walletName, walletId }: Co
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm bg-[#191919] border-[#FCD404] p-8 rounded-none">
+        <DialogHeader>
+          <DialogTitle className="text-white text-lg font-medium">Connecting</DialogTitle>
+          <DialogDescription className="sr-only">Connecting to {walletName || 'wallet'}</DialogDescription>
+        </DialogHeader>
         <div className="flex flex-col items-center space-y-6">
-          {/* Header */}
-          <h2 className="text-white text-lg font-medium">Connecting</h2>
 
           {/* Wallet Icons Bar */}
           <div className="flex items-center justify-center bg-[#FFD600] rounded-lg p-3 w-full max-w-[200px]">
@@ -42,6 +44,9 @@ export function ConnectingModal({ open, onOpenChange, walletName, walletId }: Co
                     src={walletIcon || "/placeholder.svg"}
                     alt={`${walletName} icon`}
                     className="w-8 h-8 rounded-full object-contain"
+                    width={32}
+                    height={32}
+                    style={{ width: "auto", height: "auto" }}
                     onError={(e) => {
                       e.currentTarget.src = `/placeholder.svg?height=32&width=32&query=${walletName} wallet logo`
                     }}

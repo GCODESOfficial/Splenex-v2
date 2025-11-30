@@ -59,5 +59,3 @@ config.set({
   },
 })
 
-console.log('[LiFi Config] ✅ LiFi SDK configured with EVM providers')
-

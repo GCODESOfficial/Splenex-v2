@@ -166,14 +166,12 @@ export async function getDEXScreenerChainPairs(chainId: string, page = 1): Promi
 
     const chainName = chainMap[chainId];
     if (!chainName) {
-      console.warn(`[DEXScreener] Chain ${chainId} not supported`);
       return [];
     }
 
     const response = await fetch(`${DEXSCREENER_API}/pairs/${chainName}?page=${page}`);
     
     if (!response.ok) {
-      console.warn(`[DEXScreener] Chain pairs error for ${chainName}: ${response.status}`);
       return [];
     }
 
@@ -187,7 +185,6 @@ export async function getDEXScreenerChainPairs(chainId: string, page = 1): Promi
     // Some chains return null pairs
     if (data.pairs === null || data.pairs === undefined) {
       if (page === 1) {
-        console.warn(`[DEXScreener] No pairs available for ${chainName} (chain ${chainId}) - chain may not be supported`);
       }
       return [];
     }
@@ -195,7 +192,6 @@ export async function getDEXScreenerChainPairs(chainId: string, page = 1): Promi
     // If pairs is an object (not array), it might be a different format
     if (typeof data.pairs === 'object' && !Array.isArray(data.pairs)) {
       if (page === 1) {
-        console.warn(`[DEXScreener] Unexpected pairs format for ${chainName}:`, typeof data.pairs);
       }
       return [];
     }
@@ -206,5 +202,4 @@ export async function getDEXScreenerChainPairs(chainId: string, page = 1): Promi
     return [];
   }
 }
-
 

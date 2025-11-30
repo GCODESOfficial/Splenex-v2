@@ -2,7 +2,8 @@
 
 import { fetchUniswapV2AmountsOut } from "./uniswap-v2";
 import { getDEXScreenerToken } from "./dexscreener";
-import { getTokenDecimals } from "./token-decimals";
+import { getTokenDecimals, ETH_RPC_ENDPOINTS, BSC_RPC_ENDPOINTS } from "./token-decimals";
+import { toBigIntSafe } from "./bigint-utils";
 
 /**
  * Direct DEX Integration (Fallback for Low-Cap Tokens)
@@ -60,6 +61,15 @@ const WRAPPED_NATIVE: { [key: number]: string } = {
   56: "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c", // WBNB
   1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",   // WETH
   137: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270", // WMATIC
+};
+
+const resolveRpcEndpoints = (chainId: number): string[] => {
+  switch (chainId) {
+    case 56:
+      return BSC_RPC_ENDPOINTS;
+    default:
+      return ETH_RPC_ENDPOINTS;
+  }
 };
 
 /**
@@ -142,20 +152,12 @@ function encodeSwapExactTokensForTokens(
 const PROOF_TOKEN_ADDRESS = "0x9b4a69de6ca0defdd02c0c4ce6cb84de5202944e".toLowerCase();
 const WETH_ADDRESS = WRAPPED_NATIVE[1].toLowerCase();
 
-function parseDecimalToBigInt(value: string, scale = 18): bigint {
-  if (!value) return 0n;
-  const [intPart, fracPart = ""] = value.split(".");
-  const frac = fracPart.slice(0, scale);
-  const paddedFrac = frac.padEnd(scale, "0");
-  const digits = `${intPart}${paddedFrac}`.replace(/^[-+]?0+(?=\d)/, (m) => (m.includes("-") ? "-" : "") + "");
-  return BigInt(digits || "0");
-}
-
 async function fetchDexscreenerProofAmount(
   path: string[],
   amountIn: bigint,
   isFromNative: boolean,
-  isToNative: boolean
+  isToNative: boolean,
+  chainId?: number
 ): Promise<{ amount: bigint; pairUrl?: string } | null> {
   const lowerPath = path.map((addr) => addr.toLowerCase());
   const involvesProof = lowerPath.includes(PROOF_TOKEN_ADDRESS) && lowerPath.includes(WETH_ADDRESS);
@@ -184,13 +186,13 @@ async function fetchDexscreenerProofAmount(
     }
 
     const priceScale = 18n;
-    const priceScaled = parseDecimalToBigInt(targetPair.priceNative, Number(priceScale));
+    const priceScaled = toBigIntSafe(targetPair.priceNative);
     if (priceScaled <= 0n) {
       return null;
     }
 
-    const tokenInDecimals = await getTokenDecimals(lowerPath[0]);
-    const tokenOutDecimals = await getTokenDecimals(lowerPath[lowerPath.length - 1]);
+    const tokenInDecimals = await getTokenDecimals(lowerPath[0], chainId);
+    const tokenOutDecimals = await getTokenDecimals(lowerPath[lowerPath.length - 1], chainId);
     const tokenInScale = 10n ** BigInt(tokenInDecimals);
     const tokenOutScale = 10n ** BigInt(tokenOutDecimals);
     const priceScaleFactor = 10n ** priceScale;
@@ -217,7 +219,6 @@ async function fetchDexscreenerProofAmount(
 
     return null;
   } catch (error) {
-    console.warn("[Direct DEX] ⚠️ Dexscreener fetch failed", error);
     return null;
   }
 }
@@ -228,8 +229,6 @@ async function fetchDexscreenerProofAmount(
  */
 export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise<{ success: boolean; data?: DirectDexQuote; error?: string }> {
   try {
-    console.log("[Direct DEX] 🥞 Trying direct PancakeSwap V2 as last resort...");
-    console.log(`[Direct DEX] Pair: ${request.fromToken} → ${request.toToken} on chain ${request.fromChain}`);
     
     // Only same-chain swaps
     if (request.fromChain !== request.toChain) {
@@ -270,27 +269,20 @@ export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise
       // Token to token - route through wrapped native
       path = [request.fromToken, wrappedNative, request.toToken];
     }
-    
-    console.log("[Direct DEX] Path:", path);
-    
-    let estimatedOut = BigInt(request.fromAmount);
+
+    let estimatedOut = toBigIntSafe(request.fromAmount);
     let dexscreenerPairUrl: string | undefined;
 
-    const tokenInDecimals = await getTokenDecimals(path[0]);
-    const tokenOutDecimals = await getTokenDecimals(path[path.length - 1]);
+    const tokenInDecimals = await getTokenDecimals(path[0], request.fromChain);
+    const tokenOutDecimals = await getTokenDecimals(path[path.length - 1], request.fromChain);
 
-    const uniswapAmounts = await fetchUniswapV2AmountsOut(request.fromAmount, path, "[Direct DEX]");
+    const rpcEndpoints = resolveRpcEndpoints(request.fromChain);
+    const uniswapAmounts = await fetchUniswapV2AmountsOut(request.fromAmount, path, "[Direct DEX]", rpcEndpoints, routerAddress);
     if (uniswapAmounts && uniswapAmounts.length) {
       estimatedOut = uniswapAmounts[uniswapAmounts.length - 1];
-      console.log("[Direct DEX] 📈 On-chain amounts:", uniswapAmounts.map((amount, idx) => ({
-        index: idx,
-        value: amount.toString(),
-      })));
-      console.log("[Direct DEX] 📊 Raw output (wei):", estimatedOut.toString());
-      console.log("[Direct DEX] 💧 Using on-chain Uniswap getAmountsOut");
     }
 
-    const proofDexQuote = await fetchDexscreenerProofAmount(path, BigInt(request.fromAmount), isFromNative, isToNative);
+    const proofDexQuote = await fetchDexscreenerProofAmount(path, toBigIntSafe(request.fromAmount), isFromNative, isToNative, request.fromChain);
     const baseSlippagePercent = request.slippage ?? 0.5;
     let effectiveSlippagePercent =
       uniswapAmounts && uniswapAmounts.length ? Math.max(baseSlippagePercent, 20) : baseSlippagePercent;
@@ -298,7 +290,6 @@ export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise
     if ((!uniswapAmounts || !uniswapAmounts.length) && proofDexQuote && proofDexQuote.amount > 0n) {
       estimatedOut = proofDexQuote.amount;
       dexscreenerPairUrl = proofDexQuote.pairUrl;
-      console.log("[Direct DEX] 💹 Using Dexscreener output for swap amount");
       effectiveSlippagePercent = Math.max(baseSlippagePercent, 20);
     } else if (proofDexQuote?.pairUrl) {
       dexscreenerPairUrl = proofDexQuote.pairUrl;
@@ -314,8 +305,9 @@ export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise
     let data: string;
     let value: string;
 
-    const amountInBigInt = BigInt(request.fromAmount);
-    
+    const amountInBigInt = toBigIntSafe(request.fromAmount);
+    const toHexString = (amount: bigint): string => `0x${amount.toString(16)}`;
+
     if (isFromNative) {
       // ETH/BNB → Token
       data = encodeSwapExactETHForTokens(
@@ -324,7 +316,7 @@ export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise
         request.fromAddress,
         deadline
       );
-      value = request.fromAmount;
+      value = toHexString(amountInBigInt);
     } else if (isToNative) {
       // Token → ETH/BNB
       data = encodeSwapExactTokensForETH(
@@ -334,7 +326,7 @@ export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise
         request.fromAddress,
         deadline
       );
-      value = "0";
+      value = "0x0";
     } else {
       // Token → Token
       data = encodeSwapExactTokensForTokens(
@@ -344,12 +336,9 @@ export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise
         request.fromAddress,
         deadline
       );
-      value = "0";
+      value = "0x0";
     }
-    
-    console.log("[Direct DEX] ✅ Direct DEX quote created!");
-    console.log(`[Direct DEX] Using ${dexName.toUpperCase()} router: ${routerAddress}`);
-    
+
     return {
       success: true,
       data: {
@@ -357,7 +346,7 @@ export async function getDirectDexQuote(request: DirectDexQuoteRequest): Promise
         toAmount: estimatedOut.toString(),
         toAmountMin: minOut.toString(),
         path: path,
-        fromAmount: request.fromAmount,
+        fromAmount: amountInBigInt.toString(),
         tokenInDecimals,
         tokenOutDecimals,
         fromTokenAddress: request.fromToken,

@@ -117,7 +117,12 @@ export function useLiFi() {
 
     try {
       const result = await getLiFiQuote(request);
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        return null;
+      }
       const quoteData = result.data;
       setQuote(quoteData);
       return quoteData;
@@ -181,7 +186,6 @@ export function useLiFi() {
         });
 
         const txHash = txResponse.hash;
-        console.log("[LiFi] Swap transaction sent:", txHash);
         
         // Return immediately - don't wait for confirmation
         // Analytics logging happens in background

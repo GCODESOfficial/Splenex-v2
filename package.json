@@ -15,6 +15,7 @@
     "@lifi/sdk": "^3.12.14",
     "@openzeppelin/contracts": "^4.9.6",
     "@pancakeswap/sdk": "^3.2.1",
+    "@pancakeswap/swap-sdk-evm": "^1.1.7",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.7",

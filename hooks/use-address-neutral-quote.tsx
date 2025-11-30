@@ -49,10 +49,6 @@ export function useAddressNeutralQuote() {
     setError(null);
 
     try {
-      console.log('[AddressNeutral Hook] 🔄 Getting quote with any addresses');
-      console.log(`[AddressNeutral Hook] From: ${request.fromToken} (Chain ${request.fromChain})`);
-      console.log(`[AddressNeutral Hook] To: ${request.toToken} (Chain ${request.toChain})`);
-      console.log(`[AddressNeutral Hook] Amount: ${request.fromAmount}`);
 
       const params = new URLSearchParams({
         fromChain: request.fromChain.toString(),
@@ -74,12 +70,9 @@ export function useAddressNeutralQuote() {
       const data: AddressNeutralQuoteResponse = await response.json();
 
       if (data.success && data.data) {
-        console.log(`[AddressNeutral Hook] ✅ Quote received from: ${data.data.provider}`);
-        console.log(`[AddressNeutral Hook] Output amount: ${data.data.toAmount}`);
         setQuote(data.data);
         return data.data;
       } else {
-        console.log(`[AddressNeutral Hook] ❌ No quote available: ${data.error}`);
         setError(data.error || 'No quote available');
         return null;
       }
@@ -105,9 +98,6 @@ export function useAddressNeutralQuote() {
     setError(null);
 
     try {
-      console.log('[AddressNeutral Hook] 🔄 Executing swap with any addresses');
-      console.log(`[AddressNeutral Hook] Provider: ${quote.provider}`);
-      console.log(`[AddressNeutral Hook] Swap data: ${quote.swapData}`);
 
       if (!quote.swapData) {
         throw new Error('No swap data available');
@@ -125,7 +115,6 @@ export function useAddressNeutralQuote() {
         }],
       });
 
-      console.log('[AddressNeutral Hook] ✅ Transaction sent:', txHash);
       return txHash;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to execute swap';

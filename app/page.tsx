@@ -66,14 +66,12 @@ export default function Page() {
       try {
         // Fetch chains from LiFi (includes chains from all integrated aggregators)
         const supportedChains = await getChains();
-        console.log(`[Overview] ✅ Loaded ${supportedChains.length} chains from all aggregators`);
         setChains(supportedChains);
 
         // Fetch all AMMs from custom API (includes LiFi + additional integrations like PancakeSwap)
         const ammsResponse = await fetch('/api/supported-amms');
         if (ammsResponse.ok) {
           const ammsData = await ammsResponse.json();
-          console.log(`[Overview] ✅ Loaded ${ammsData.length} AMMs (including PancakeSwap)`);
           setAmms(ammsData);
         } else {
           // Fallback to LiFi tools if custom API fails
@@ -153,8 +151,7 @@ export default function Page() {
                 )}
               </p>
         </div>
-            
-            
+
         </div>
         </div>
       </div>
@@ -285,7 +282,6 @@ export default function Page() {
         </div>
       </div>
 
-
       {/* Supported Chains */}
       <div className="p-2">
           <h3 className="text-white text-lg font-semibold mb-4">Supported Chains</h3>
@@ -320,7 +316,6 @@ export default function Page() {
             {chains.length}+ blockchain networks supported
           </div>
         </div>
-
 
       {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -441,7 +436,6 @@ export default function Page() {
           </div>
         </div>
 
-        
         {/* AMM Platforms */}
         <div className="p-6">
           <h3 className="text-white text-lg font-semibold mb-2">

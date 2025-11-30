@@ -24,7 +24,6 @@ export function EnhancedNavbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
-    console.log("[v0] Wallet connection state:", { isConnected, address, chain: chain?.name })
   }, [isConnected, address, chain])
 
   if (!isClient) {
@@ -97,7 +96,6 @@ export function EnhancedNavbar() {
           {!isConnected ? (
             <Button
               onClick={() => {
-                console.log("[v0] Opening wallet modal")
                 setShowWalletModal(true)
               }}
               className="bg-[#FFD600] text-black hover:bg-[#FFD600]/90 font-medium"

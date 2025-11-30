@@ -192,20 +192,16 @@ export function WalletModal({
     // For secondary wallet
     if (isSecondaryWallet && isSecondaryConnected && open && secondaryAddress) {
       if (justConnectedSwapWallet && swapWalletType && onSwapWalletConnected) {
-        console.log("[WalletModal] 🔗 Secondary wallet connected for swap:", secondaryAddress)
         onSwapWalletConnected(secondaryAddress, swapWalletType)
       }
-      console.log("[WalletModal] ✅ Auto-closing modal after secondary wallet connection")
       onOpenChange(false)
       setJustConnectedSwapWallet(false)
     }
     // For primary wallet
     else if (!isSecondaryWallet && isConnected && open && address) {
       if (justConnectedSwapWallet && swapWalletType && onSwapWalletConnected) {
-        console.log("[WalletModal] 🔗 Primary wallet connected for swap:", address)
         onSwapWalletConnected(address, swapWalletType)
       }
-      console.log("[WalletModal] ✅ Auto-closing modal after primary wallet connection")
       onOpenChange(false)
       setJustConnectedSwapWallet(false)
     }
@@ -268,7 +264,6 @@ export function WalletModal({
 
       return false
     } catch (err) {
-      console.warn("[WalletModal] provider request failed:", err)
       return false
     }
   }
@@ -283,7 +278,6 @@ export function WalletModal({
     // If installed and we have a provider, use it directly
     if (wallet.isInstalled && wallet.provider) {
       try {
-        console.log(`[WalletModal] ${isSecondaryWallet ? 'Secondary' : 'Primary'} - Connecting with provider for ${wallet.name}`)
         // Pass the specific provider to connect function
         await connectFunction(wallet.id, wallet.provider)
         if (swapWalletType) setJustConnectedSwapWallet(true)

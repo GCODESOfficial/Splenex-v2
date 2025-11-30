@@ -8,7 +8,6 @@ import { QuoteRequest, UnifiedQuote } from './comprehensive-aggregators';
 // PancakeSwap V3 (BSC's largest DEX)
 async function getPancakeSwapV3Quote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[PancakeSwapV3] 🥞 Getting quote from PancakeSwap V3...");
     
     if (request.fromChain !== 56 || request.toChain !== 56) {
       return null; // PancakeSwap V3 only supports BSC
@@ -50,7 +49,6 @@ async function getPancakeSwapV3Quote(request: QuoteRequest): Promise<UnifiedQuot
 // BiSwap (BSC DEX)
 async function getBiSwapQuote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[BiSwap] 🔄 Getting quote from BiSwap...");
     
     if (request.fromChain !== 56 || request.toChain !== 56) {
       return null;
@@ -92,7 +90,6 @@ async function getBiSwapQuote(request: QuoteRequest): Promise<UnifiedQuote | nul
 // ApeSwap (BSC DEX)
 async function getApeSwapQuote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[ApeSwap] 🦍 Getting quote from ApeSwap...");
     
     if (request.fromChain !== 56 || request.toChain !== 56) {
       return null;
@@ -134,7 +131,6 @@ async function getApeSwapQuote(request: QuoteRequest): Promise<UnifiedQuote | nu
 // MDEX (BSC DEX)
 async function getMDEXQuote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[MDEX] 🔄 Getting quote from MDEX...");
     
     if (request.fromChain !== 56 || request.toChain !== 56) {
       return null;
@@ -180,7 +176,6 @@ async function getMDEXQuote(request: QuoteRequest): Promise<UnifiedQuote | null>
 // Uniswap V2 (Ethereum)
 async function getUniswapV2Quote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[UniswapV2] 🦄 Getting quote from Uniswap V2...");
     
     if (request.fromChain !== 1 || request.toChain !== 1) {
       return null; // Uniswap V2 only supports Ethereum
@@ -222,7 +217,6 @@ async function getUniswapV2Quote(request: QuoteRequest): Promise<UnifiedQuote | 
 // Uniswap V3 (Ethereum)
 async function getUniswapV3Quote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[UniswapV3] 🦄 Getting quote from Uniswap V3...");
     
     if (request.fromChain !== 1 || request.toChain !== 1) {
       return null; // Uniswap V3 only supports Ethereum
@@ -264,7 +258,6 @@ async function getUniswapV3Quote(request: QuoteRequest): Promise<UnifiedQuote | 
 // SushiSwap (Ethereum)
 async function getSushiSwapEthereumQuote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[SushiSwapEthereum] 🍣 Getting quote from SushiSwap Ethereum...");
     
     if (request.fromChain !== 1 || request.toChain !== 1) {
       return null;
@@ -306,7 +299,6 @@ async function getSushiSwapEthereumQuote(request: QuoteRequest): Promise<Unified
 // Curve (Ethereum)
 async function getCurveEthereumQuote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[CurveEthereum] 📈 Getting quote from Curve Ethereum...");
     
     if (request.fromChain !== 1 || request.toChain !== 1) {
       return null;
@@ -348,7 +340,6 @@ async function getCurveEthereumQuote(request: QuoteRequest): Promise<UnifiedQuot
 // Balancer V2 (Ethereum)
 async function getBalancerV2Quote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[BalancerV2] ⚖️ Getting quote from Balancer V2...");
     
     if (request.fromChain !== 1 || request.toChain !== 1) {
       return null;
@@ -390,7 +381,6 @@ async function getBalancerV2Quote(request: QuoteRequest): Promise<UnifiedQuote |
 // Yearn Finance (Ethereum)
 async function getYearnFinanceQuote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[YearnFinance] 🏦 Getting quote from Yearn Finance...");
     
     if (request.fromChain !== 1 || request.toChain !== 1) {
       return null;
@@ -432,7 +422,6 @@ async function getYearnFinanceQuote(request: QuoteRequest): Promise<UnifiedQuote
 // Compound (Ethereum)
 async function getCompoundQuote(request: QuoteRequest): Promise<UnifiedQuote | null> {
   try {
-    console.log("[Compound] 🏛️ Getting quote from Compound...");
     
     if (request.fromChain !== 1 || request.toChain !== 1) {
       return null;

@@ -34,7 +34,6 @@ export async function signLimitOrder(
   provider: any
 ): Promise<LimitOrderSignature | null> {
   try {
-    console.log("[LimitOrder] 🎯 Creating EIP-712 typed signature for order...");
 
     // EIP-712 domain
     // Use a clear, identifiable domain name to help MetaMask recognize legitimate limit orders
@@ -72,12 +71,6 @@ export async function signLimitOrder(
       salt: orderData.salt,
     };
 
-    console.log("[LimitOrder] 📝 Requesting EIP-712 signature for limit order...");
-    console.log("[LimitOrder] 🔒 This is a secure limit order signature");
-    console.log("[LimitOrder] 💰 Amount:", orderData.fromAmount);
-    console.log("[LimitOrder] 🎯 Target Rate:", orderData.targetRate);
-    console.log("[LimitOrder] ⏰ Expires:", new Date(orderData.expiryTimestamp * 1000).toISOString());
-
     // Sign using EIP-712
     const signature = await provider.request({
       method: "eth_signTypedData_v4",
@@ -91,8 +84,6 @@ export async function signLimitOrder(
         }),
       ],
     });
-
-    console.log("[LimitOrder] ✅ Order signature obtained!");
 
     // Split signature
     const r = signature.slice(0, 66);

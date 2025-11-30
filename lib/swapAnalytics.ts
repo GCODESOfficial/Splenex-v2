@@ -24,13 +24,11 @@ export interface SwapAnalyticsData {
  */
 export async function logSwapAnalytics(data: SwapAnalyticsData): Promise<boolean> {
   try {
-    console.log('[SwapAnalytics] 📊 Logging swap to database:', {
       from: `${data.from_amount} ${data.from_token}`,
       to: `${data.to_amount} ${data.to_token}`,
       volume: `$${data.swap_volume_usd.toFixed(2)}`,
       tx: data.tx_hash,
       wallet: data.wallet_address
-    });
 
     const { data: insertData, error } = await supabase
       .from('swap_analytics')
@@ -42,7 +40,6 @@ export async function logSwapAnalytics(data: SwapAnalyticsData): Promise<boolean
       return false;
     }
 
-    console.log('[SwapAnalytics] ✅ Successfully logged swap to database:', insertData);
     return true;
   } catch (error) {
     console.error('[SwapAnalytics] ❌ Error logging swap analytics:', error);
@@ -75,7 +72,6 @@ export async function calculateTokenUSDValue(
       }
     }
 
-    console.warn(`[SwapAnalytics] ⚠️ Could not determine USD value for ${tokenSymbol}`);
     return 0;
   } catch (error) {
     console.error(`[SwapAnalytics] ❌ Error calculating USD value for ${tokenSymbol}:`, error);

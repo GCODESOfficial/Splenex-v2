@@ -26,7 +26,6 @@ export function useAnalytics() {
         setIsLoading(true);
 
         // Fetch data from API route
-        console.log("[Analytics] 🔍 Fetching analytics from API...");
         
         const response = await fetch("/api/analytics");
         
@@ -39,12 +38,9 @@ export function useAnalytics() {
         const data = await response.json();
 
         if (!data || !Array.isArray(data) || data.length === 0) {
-          console.log("[Analytics] ⚠️ No swap data found");
           setIsLoading(false);
           return;
         }
-
-        console.log(`[Analytics] ✅ Found ${data.length} swaps`);
 
         // Calculate metrics from API data
         const totalVolume = data.reduce((sum: number, row: any) => {
@@ -69,14 +65,6 @@ export function useAnalytics() {
 
         // Network revenue = gas fee revenue + LI.FI fees
         const networkRevenue = gasFeeRevenue + lifiFeeRevenue;
-        
-        console.log(`[Analytics] 📊 Calculated metrics:`);
-        console.log(`[Analytics]   - Total Volume: $${totalVolume.toFixed(2)}`);
-        console.log(`[Analytics]   - Transaction Count: ${transactionCount}`);
-        console.log(`[Analytics]   - Unique Users: ${uniqueUsers}`);
-        console.log(`[Analytics]   - Gas Fee Revenue: $${gasFeeRevenue.toFixed(2)}`);
-        console.log(`[Analytics]   - LI.FI Fee Revenue: $${lifiFeeRevenue.toFixed(2)}`);
-        console.log(`[Analytics]   - Network Revenue: $${networkRevenue.toFixed(2)}`);
 
         // Group by day for chart
         const grouped: Record<string, { volume: number; transactions: number }> = {};

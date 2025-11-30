@@ -53,7 +53,6 @@ const getTimeFrameInSeconds = () => {
   }
 }
 
-
   useEffect(() => {
     if (isActive && timeRemaining > 0) {
       const timer = setInterval(() => {

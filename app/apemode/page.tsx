@@ -12,12 +12,10 @@ export default function ApeModePage() {
 
   const handleActivateApeMode = (config: ApeModeConfig) => {
     setApeModeConfig(config)
-    console.log("[v0] ApeMode activated with config:", config)
   }
 
   const handleDeactivateApeMode = () => {
     setApeModeConfig(null)
-    console.log("[v0] ApeMode deactivated")
   }
 
   return (

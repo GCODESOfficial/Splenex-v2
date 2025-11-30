@@ -69,7 +69,6 @@ function RankCardModal({
       });
 
       const dataUrl = canvas.toDataURL("image/png");
-      console.log("Card captured successfully");
       return dataUrl;
     } catch (error) {
       console.error("Error capturing card:", error);
@@ -78,7 +77,6 @@ function RankCardModal({
   };
 
   const handleExport = async () => {
-    console.log("Export clicked");
     const dataUrl = await captureCard();
     if (!dataUrl) {
       console.error("No data URL returned from captureCard");
@@ -86,7 +84,6 @@ function RankCardModal({
       return;
     }
 
-    console.log("Downloading card...");
     // Download immediately
     const link = document.createElement("a");
     link.download = `splenex-leaderboard-${walletFull.slice(0, 8)}.png`;

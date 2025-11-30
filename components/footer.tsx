@@ -10,7 +10,7 @@ export default function Footer() {
       <div className="flex items-center justify-between px-8 py-5">
         {/* Left side */}
         <div className="flex items-center gap-2 text-[14px] text-white">
-          <Link href="/docs" className="hover:text-[#CFA83C]">
+          <Link href="https://splenex.gitbook.io/documentation_v1" target="_blank" className="hover:text-[#CFA83C]">
             Docs
           </Link>
           <span className="text-white">|</span>
@@ -27,6 +27,7 @@ export default function Footer() {
               alt="close"
               width={18}
               height={18}
+              style={{ width: "auto", height: "auto" }}
             />
           </button>
           <button aria-label="Telegram" className="hover:opacity-70">
@@ -35,6 +36,7 @@ export default function Footer() {
               alt="telegram"
               width={18}
               height={18}
+              style={{ width: "auto", height: "auto" }}
             />
           </button>
         </div>

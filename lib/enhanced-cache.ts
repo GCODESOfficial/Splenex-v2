@@ -150,7 +150,6 @@ export class CacheWarmer {
   }
 
   private async fetchAndCacheBalances(walletAddress: string, chains: string[]): Promise<void> {
-    console.log('[CacheWarmer] 🔥 Warming balance cache...');
     
     // Fetch balances for top chains in parallel
     const topChains = chains.slice(0, 5); // Top 5 chains
@@ -163,12 +162,10 @@ export class CacheWarmer {
           balanceCache.set(cacheKey, data.result || []);
         }
       } catch (error) {
-        console.warn(`[CacheWarmer] Failed to warm cache for ${chain}:`, error);
       }
     });
 
     await Promise.allSettled(promises);
-    console.log('[CacheWarmer] ✅ Balance cache warmed');
   }
 
   async warmPriceCache(symbols: string[]): Promise<void> {
@@ -189,7 +186,6 @@ export class CacheWarmer {
   }
 
   private async fetchAndCachePrices(symbols: string[]): Promise<void> {
-    console.log('[CacheWarmer] 🔥 Warming price cache...');
     
     try {
       const response = await fetch(
@@ -205,10 +201,8 @@ export class CacheWarmer {
           priceCache.set(`price_${symbol.toUpperCase()}`, price);
         });
         
-        console.log('[CacheWarmer] ✅ Price cache warmed');
       }
     } catch (error) {
-      console.warn('[CacheWarmer] Failed to warm price cache:', error);
     }
   }
 }
@@ -224,7 +218,6 @@ export class CacheInvalidator {
     } else {
       balanceCache.clear(); // Clear all balances
     }
-    console.log('[CacheInvalidator] 🗑️ Balance cache invalidated');
   }
 
   invalidateQuoteCache(fromToken?: string, toToken?: string): void {
@@ -240,7 +233,6 @@ export class CacheInvalidator {
     } else {
       quoteCache.clear(); // Clear all quotes
     }
-    console.log('[CacheInvalidator] 🗑️ Quote cache invalidated');
   }
 
   invalidatePriceCache(symbol?: string): void {
@@ -250,7 +242,6 @@ export class CacheInvalidator {
     } else {
       priceCache.clear(); // Clear all prices
     }
-    console.log('[CacheInvalidator] 🗑️ Price cache invalidated');
   }
 }
 
@@ -342,8 +333,6 @@ export class SmartPrefetcher {
     const pattern = this.userPatterns.get(walletAddress);
     if (!pattern) return;
 
-    console.log('[SmartPrefetcher] 🎯 Prefetching for user patterns...');
-
     // Prefetch balances for frequent chains
     if (pattern.frequentChains.length > 0) {
       await cacheWarmer.warmBalanceCache(walletAddress, pattern.frequentChains);
@@ -354,7 +343,6 @@ export class SmartPrefetcher {
       await cacheWarmer.warmPriceCache(pattern.frequentTokens);
     }
 
-    console.log('[SmartPrefetcher] ✅ Prefetching completed');
   }
 
   getUserPattern(walletAddress: string): typeof this.userPatterns extends Map<string, infer U> ? U : never | null {
@@ -377,7 +365,6 @@ export function startCacheMaintenance(): void {
       }
     }
 
-    console.log('[CacheMaintenance] 🧹 Cache maintenance completed');
   }, 5 * 60 * 1000); // 5 minutes
 }
 

@@ -5,7 +5,7 @@ import { useWallet } from "@/hooks/use-wallet"
 import { TrendingUp, RefreshCw, Loader2 } from "lucide-react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 
 export function BalanceDisplay() {
@@ -72,7 +72,7 @@ export function BalanceDisplay() {
         onMouseLeave={() => !isMobile && setShowTooltip(false)}
         onClick={handleClick}
       >
-        <Image src="/images/purse.svg" alt="wallet" width={18} height={18} />
+        <Image src="/images/purse.svg" alt="wallet" width={18} height={18} style={{ width: "auto", height: "auto" }} />
         <div className="flex flex-col">
           <span className="text-white font-semibold text-sm">
             {isConnected ? formatUsd(totalUsdBalance) : "$0.00"}
@@ -145,6 +145,9 @@ export function BalanceDisplay() {
             <DialogTitle className="text-lg font-semibold text-yellow-400">
               Multi-Chain Portfolio
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              View your multi-chain token balances and portfolio value
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 mt-4 max-h-[60vh] overflow-y-auto">

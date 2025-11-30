@@ -51,7 +51,6 @@ class SecureLogger {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   dev(...args: any[]) {
     if (IS_DEV) {
-      console.log('[DEV]', ...args);
     }
   }
 
@@ -61,7 +60,6 @@ class SecureLogger {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   info(...args: any[]) {
     if (IS_DEV) {
-      console.log('[INFO]', ...args);
     }
   }
 
@@ -71,9 +69,7 @@ class SecureLogger {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   warn(...args: any[]) {
     if (IS_PRODUCTION) {
-      console.warn('[WARN]', ...args.map(sanitize));
     } else {
-      console.warn('[WARN]', ...args);
     }
   }
 
@@ -95,7 +91,6 @@ class SecureLogger {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   success(...args: any[]) {
     if (IS_DEV) {
-      console.log('[SUCCESS]', ...args);
     }
   }
 
@@ -105,7 +100,6 @@ class SecureLogger {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   security(message: string, details?: any) {
     const timestamp = new Date().toISOString();
-    console.warn(`[SECURITY ${timestamp}]`, message, IS_PRODUCTION && details ? sanitize(details) : details);
   }
 }
 
@@ -116,14 +110,9 @@ export const logger = new SecureLogger();
  */
 export function disableConsoleInProduction() {
   if (IS_PRODUCTION) {
-    // Disable console.log completely
-    console.log = () => {};
-    console.info = () => {};
-    console.debug = () => {};
     
     // Keep error and warn but sanitize
     const originalError = console.error;
-    const originalWarn = console.warn;
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.error = (...args: any[]) => {
@@ -131,8 +120,6 @@ export function disableConsoleInProduction() {
     };
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.warn = (...args: any[]) => {
-      originalWarn(...args.map(sanitize));
     };
   }
 }

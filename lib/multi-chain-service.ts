@@ -35,7 +35,6 @@ export async function fetchMultiChainBalances(
   walletAddress: string,
   onProgress?: (progress: { chain: string; done: number; total: number }) => void
 ): Promise<BalanceResult> {
-  console.log("[MultiChain] 🚀 Starting balance fetch across all chains...")
   
   const allChains = getAllEnabledChains()
   const allTokens: TokenBalance[] = []
@@ -52,7 +51,6 @@ export async function fetchMultiChainBalances(
     // Process each batch in parallel
     const batchPromises = batch.map(async (chain) => {
       try {
-        console.log(`[MultiChain] Fetching ${chain.name}...`)
         
         let tokens: TokenBalance[] = []
 
@@ -82,7 +80,6 @@ export async function fetchMultiChainBalances(
             tokens = await fetchSuiBalances(chain, walletAddress)
             break
           default:
-            console.warn(`[MultiChain] Chain type ${chain.type} not yet implemented`)
         }
 
         return { chain: chain.name, tokens }
@@ -114,9 +111,6 @@ export async function fetchMultiChainBalances(
   // Calculate total USD value
   const totalUsdValue = allTokens.reduce((sum, token) => sum + token.usdValue, 0)
 
-  console.log(`[MultiChain] ✅ Completed! Found ${allTokens.length} tokens across ${completedChains} chains`)
-  console.log(`[MultiChain] 💰 Total Portfolio Value: $${totalUsdValue.toFixed(2)}`)
-
   return {
     tokens: allTokens,
     totalUsdValue,
@@ -140,7 +134,6 @@ async function fetchEVMChainBalances(
     
     // Check if Moralis returned an error (empty array with error) or no tokens
     if (moralisResult.success === false) {
-      console.log(`[MultiChain] Moralis unavailable for ${chain.name}, trying RPC...`)
       const rpcTokens = await fetchFromEVMRPC(chain, walletAddress)
       tokens.push(...rpcTokens)
     } else {
@@ -164,11 +157,9 @@ async function fetchFromMoralis(
   walletAddress: string
 ): Promise<{ success: boolean; tokens: TokenBalance[]; error?: string }> {
   try {
-    console.log(`[MultiChain] 🎯 Attempting Moralis for ${chain.name}`)
     
     const tokens = await moralisService.getTokenBalances(walletAddress, chain.name)
     
-    console.log(`[MultiChain] ✅ Moralis found ${tokens.length} tokens for ${chain.name}`)
     return { success: true, tokens }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -176,7 +167,6 @@ async function fetchFromMoralis(
     return { success: false, tokens: [], error: errorMessage }
   }
 }
-
 
 /**
  * Fetch from EVM RPC directly with parallel optimization
@@ -209,7 +199,6 @@ async function fetchFromEVMRPC(
         }
         return null
       } catch (error) {
-        console.warn(`[MultiChain] RPC ${rpcUrl} failed:`, error)
         return null
       }
     })

@@ -17,8 +17,6 @@ export class ComprehensiveTokenDetector {
 
   // Main method to detect all tokens using Covalent comprehensive strategy across multiple chains
   async detectAllTokens(address: string, chain: string): Promise<ComprehensiveTokenResult> {
-    console.log(`[ComprehensiveDetector] Starting comprehensive Covalent token detection for ${address}`)
-    
     const allTokens: TokenBalance[] = []
     const detectionMethods: string[] = []
     const errors: string[] = []
@@ -36,7 +34,6 @@ export class ComprehensiveTokenDetector {
     ]
 
     // Strategy 1: Multi-chain Covalent GoldRush API
-    console.log('[ComprehensiveDetector] Strategy 1: Multi-chain Covalent GoldRush API')
     const multiChainTokens = await this.detectViaMultiChainCovalent(address, supportedChains)
     allTokens.push(...multiChainTokens.tokens)
     detectionMethods.push(...multiChainTokens.methods)
@@ -45,11 +42,6 @@ export class ComprehensiveTokenDetector {
     // Remove duplicates and calculate total value
     const uniqueTokens = this.removeDuplicates(allTokens)
     const totalUsdValue = uniqueTokens.reduce((sum, token) => sum + (token.usdValue || 0), 0)
-
-    console.log(`[ComprehensiveDetector] ✅ Detection complete: ${uniqueTokens.length} unique tokens found`)
-    console.log(`[ComprehensiveDetector] 💰 Total USD value: $${totalUsdValue.toFixed(2)}`)
-    console.log(`[ComprehensiveDetector] 🔍 Methods used: ${[...new Set(detectionMethods)].join(', ')}`)
-    console.log(`[ComprehensiveDetector] 📊 Tokens by chain:`, this.groupTokensByChain(uniqueTokens))
 
     return {
       tokens: uniqueTokens,
@@ -65,13 +57,9 @@ export class ComprehensiveTokenDetector {
     const methods: string[] = []
     const errors: string[] = []
 
-    console.log(`[ComprehensiveDetector] Starting multi-chain detection across ${supportedChains.length} chains`)
-
     // Process chains in parallel for better performance
     const chainPromises = supportedChains.map(async (chain) => {
       try {
-        console.log(`[ComprehensiveDetector] 🔄 Checking ${chain.name} (${chain.id})`)
-        
         const chainTokens = await this.detectViaCovalent(address, chain.id)
         
         // Add chain information to tokens
@@ -86,31 +74,15 @@ export class ComprehensiveTokenDetector {
         methods.push(...chainTokens.methods.map(method => `${method} (${chain.name})`))
         errors.push(...chainTokens.errors.map(error => `${error} (${chain.name})`))
         
-        console.log(`[ComprehensiveDetector] ✅ ${chain.name}: Found ${chainTokens.tokens.length} tokens (ALL tokens from Covalent API)`)
-        
-        // Log details of what was found
-        if (tokensWithChain.length > 0) {
-          console.log(`[ComprehensiveDetector] 📋 ${chain.name} token details:`)
-          tokensWithChain.forEach(t => {
-            console.log(`  - ${t.symbol}: ${t.balance} ($${(t.usdValue || 0).toFixed(2)}) [${t.address}]`)
-          })
-        }
-        
         return { chain: chain.name, tokenCount: chainTokens.tokens.length }
       } catch (error) {
         const errorMsg = `${chain.name} failed: ${error}`
         errors.push(errorMsg)
-        console.log(`[ComprehensiveDetector] ❌ ${errorMsg}`)
         return { chain: chain.name, tokenCount: 0 }
       }
     })
 
-    const results = await Promise.all(chainPromises)
-    
-    console.log(`[ComprehensiveDetector] Multi-chain detection complete:`)
-    results.forEach(result => {
-      console.log(`  ${result.chain}: ${result.tokenCount} tokens`)
-    })
+    await Promise.all(chainPromises)
 
     return { tokens, methods, errors }
   }
@@ -121,14 +93,9 @@ export class ComprehensiveTokenDetector {
     const methods: string[] = []
     const errors: string[] = []
 
-    console.log(`[ComprehensiveDetector] Starting Strategy 1 with Covalent provider`)
-
     for (const provider of tokenProviders) {
       try {
-        console.log(`[ComprehensiveDetector] 🔄 Trying ${provider.name}...`)
-        
         if (provider.name === 'Covalent' && !this.covalentApiKey) {
-          console.log(`[ComprehensiveDetector] ⚠️ Skipping ${provider.name} - no API key`)
           continue
         }
         
@@ -138,20 +105,12 @@ export class ComprehensiveTokenDetector {
           const convertedTokens = this.convertProviderTokens(providerTokens, provider.name)
           tokens.push(...convertedTokens)
           methods.push(provider.name)
-          console.log(`[ComprehensiveDetector] ✅ ${provider.name}: Found ${providerTokens.length} tokens (ALL tokens with balance)`)
-          console.log(`[ComprehensiveDetector] 📋 ${provider.name} ALL TOKENS:`, convertedTokens.map(t => `${t.symbol}: ${t.balance}`))
-          console.log(`[ComprehensiveDetector] 💰 Total USD: $${convertedTokens.reduce((sum, t) => sum + (t.usdValue || 0), 0).toFixed(2)}`)
-        } else {
-          console.log(`[ComprehensiveDetector] ⚠️ ${provider.name}: No tokens found`)
         }
       } catch (error) {
         const errorMsg = `${provider.name} failed: ${error}`
         errors.push(errorMsg)
-        console.log(`[ComprehensiveDetector] ❌ ${errorMsg}`)
       }
     }
-
-    console.log(`[ComprehensiveDetector] Strategy 1 completed: ${tokens.length} tokens from ${methods.length} providers`)
     return { tokens, methods, errors }
   }
 

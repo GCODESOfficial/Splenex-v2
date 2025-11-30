@@ -38,7 +38,6 @@ export async function calculateTotalTransactionValue(
     const tokenPrice = await getTokenPrice(nativeTokenSymbol);
     
     if (tokenPrice === 0) {
-      console.warn(`[Revenue] Could not get price for ${nativeTokenSymbol}, using original value`);
       return originalValue;
     }
     
@@ -47,12 +46,7 @@ export async function calculateTotalTransactionValue(
     const taxValueWei = BigInt(Math.floor(gasFeeTaxInToken * Math.pow(10, 18)));
     const originalValueWei = BigInt(originalValue);
     const totalValueWei = originalValueWei + taxValueWei;
-    
-    console.log(`[Revenue] 💰 Transaction value calculation:`);
-    console.log(`[Revenue] Original value: ${originalValue}`);
-    console.log(`[Revenue] Tax value: ${gasFeeTaxInToken.toFixed(6)} ${nativeTokenSymbol}`);
-    console.log(`[Revenue] Total value: 0x${totalValueWei.toString(16)}`);
-    
+
     return "0x" + totalValueWei.toString(16);
   } catch (error) {
     console.error("[Revenue] Error calculating total transaction value:", error);
@@ -107,10 +101,6 @@ export function createRevenueInclusiveTransaction(
   // 1. Deploy RevenueSplitter contract on each chain
   // 2. Modify transaction to send to RevenueSplitter contract
   // 3. RevenueSplitter automatically splits the funds
-  
-  console.log(`[Revenue] 📝 Transaction prepared with revenue calculation`);
-  console.log(`[Revenue] 💰 Revenue tax: $${(gasFeeUsd * 0.5).toFixed(2)}`);
-  console.log(`[Revenue] 📋 Revenue will be collected through smart contract integration`);
-  
+
   return originalTransaction;
 }

@@ -52,13 +52,10 @@ const WalletIcon = ({ walletType, className = "w-5 h-5" }: { walletType?: string
 
 export function WalletDropdown() {
   const { address, disconnect, balance, chainId, connectedWallet } = useWallet()
-  
-  console.log('[WalletDropdown] connectedWallet from useWallet:', connectedWallet)
 
   const copyAddress = async () => {
     if (address) {
       await navigator.clipboard.writeText(address)
-      console.log("[v0] Address copied")
     }
   }
 

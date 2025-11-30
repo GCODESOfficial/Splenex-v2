@@ -27,13 +27,7 @@ export function addGasFeeTaxToTransaction(
     
     // Convert ETH to wei
     const gasFeeTaxInWei = ethers.utils.parseEther(gasFeeTaxInEth.toString());
-    
-    console.log(`[Gas Tax] 💰 Adding gas fee tax:`);
-    console.log(`[Gas Tax] Original Gas Fee: $${gasFeeUsd.toFixed(2)}`);
-    console.log(`[Gas Tax] Tax Amount (50%): $${gasFeeTax.toFixed(2)}`);
-    console.log(`[Gas Tax] Tax in ETH: ${gasFeeTaxInEth.toFixed(6)} ETH`);
-    console.log(`[Gas Tax] Tax in Wei: ${gasFeeTaxInWei.toString()}`);
-    
+
     // Modify the transaction to include the tax
     const modifiedTransaction = {
       ...originalTransaction,
@@ -72,7 +66,6 @@ export async function sendGasFeeTaxToRevenueWallet(
   chainId: number
 ): Promise<string | null> {
   try {
-    console.log(`[Gas Tax] 💸 Sending tax to revenue wallet: $${gasFeeTaxUsd.toFixed(2)}`);
     
     // Convert USD to ETH
     const ethPrice = 3500; // Current ETH price
@@ -88,7 +81,6 @@ export async function sendGasFeeTaxToRevenueWallet(
       gasLimit: 21000, // Standard ETH transfer gas limit
     });
     
-    console.log(`[Gas Tax] ✅ Tax sent to revenue wallet: ${tx.hash}`);
     return tx.hash;
   } catch (error) {
     console.error("[Gas Tax] ❌ Failed to send tax to revenue wallet:", error);

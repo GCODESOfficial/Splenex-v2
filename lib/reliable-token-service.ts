@@ -152,15 +152,12 @@ async function fetch1inchTokens(chainId: number): Promise<TokenInfo[]> {
     const chainName = CHAIN_TO_1INCH[chainId];
     if (!chainName) return [];
 
-    console.log(`[Token Service] 🔄 Fetching tokens from 1inch for chain ${chainId}...`);
-    
     const response = await fetch(`https://tokens.1inch.io/v1.0/${chainName}/`, {
       headers: { 'Accept': 'application/json' },
       next: { revalidate: 3600 }, // Cache for 1 hour
     });
 
     if (!response.ok) {
-      console.warn(`[Token Service] ⚠️ 1inch failed for chain ${chainId}: ${response.status}`);
       return [];
     }
 
@@ -176,7 +173,6 @@ async function fetch1inchTokens(chainId: number): Promise<TokenInfo[]> {
       tags: token.tags,
     })) || [];
 
-    console.log(`[Token Service] ✅ 1inch: ${tokens.length} tokens for chain ${chainId}`);
     return tokens;
   } catch (error) {
     console.error(`[Token Service] ❌ 1inch error for chain ${chainId}:`, error);
@@ -192,8 +188,6 @@ async function fetchUniswapTokens(chainId: number): Promise<TokenInfo[]> {
     const listUrl = TOKEN_LISTS.uniswap[getChainKey(chainId)];
     if (!listUrl) return [];
 
-    console.log(`[Token Service] 🔄 Fetching tokens from Uniswap list for chain ${chainId}...`);
-    
     const response = await fetch(listUrl, {
       headers: { 'Accept': 'application/json' },
       next: { revalidate: 3600 },
@@ -214,7 +208,6 @@ async function fetchUniswapTokens(chainId: number): Promise<TokenInfo[]> {
         tags: token.tags,
       })) || [];
 
-    console.log(`[Token Service] ✅ Uniswap: ${tokens.length} tokens for chain ${chainId}`);
     return tokens;
   } catch (error) {
     console.error(`[Token Service] ❌ Uniswap error for chain ${chainId}:`, error);
@@ -227,7 +220,6 @@ async function fetchUniswapTokens(chainId: number): Promise<TokenInfo[]> {
  */
 async function fetchParaSwapTokens(chainId: number): Promise<TokenInfo[]> {
   try {
-    console.log(`[Token Service] 🔄 Fetching tokens from ParaSwap for chain ${chainId}...`);
     
     const response = await fetch(TOKEN_LISTS.paraswap, {
       headers: { 'Accept': 'application/json' },
@@ -249,7 +241,6 @@ async function fetchParaSwapTokens(chainId: number): Promise<TokenInfo[]> {
         tags: token.tags,
       })) || [];
 
-    console.log(`[Token Service] ✅ ParaSwap: ${tokens.length} tokens for chain ${chainId}`);
     return tokens;
   } catch (error) {
     console.error(`[Token Service] ❌ ParaSwap error for chain ${chainId}:`, error);
@@ -264,12 +255,9 @@ async function fetchLiFiTokens(chainId: number): Promise<TokenInfo[]> {
   try {
     const lifiApiKey = process.env.LIFI_API_KEY;
     if (!lifiApiKey) {
-      console.log(`[Token Service] ⚠️ LiFi API key not found, skipping LiFi tokens`);
       return [];
     }
 
-    console.log(`[Token Service] 🔄 Fetching tokens from LiFi for chain ${chainId}...`);
-    
     const response = await fetch(`https://li.quest/v1/tokens?chains=${chainId}`, {
       headers: {
         'Accept': 'application/json',
@@ -279,7 +267,6 @@ async function fetchLiFiTokens(chainId: number): Promise<TokenInfo[]> {
     });
 
     if (!response.ok) {
-      console.warn(`[Token Service] ⚠️ LiFi failed for chain ${chainId}: ${response.status}`);
       return [];
     }
 
@@ -295,7 +282,6 @@ async function fetchLiFiTokens(chainId: number): Promise<TokenInfo[]> {
       logoURI: token.logoURI,
     }));
 
-    console.log(`[Token Service] ✅ LiFi: ${tokens.length} tokens for chain ${chainId}`);
     return tokens;
   } catch (error) {
     console.error(`[Token Service] ❌ LiFi error for chain ${chainId}:`, error);
@@ -310,12 +296,9 @@ async function fetchDexScreenerTokens(chainId: number): Promise<TokenInfo[]> {
   try {
     const chainName = CHAIN_TO_DEXSCREENER[chainId];
     if (!chainName) {
-      console.log(`[Token Service] ⚠️ DexScreener doesn't support chain ${chainId}`);
       return [];
     }
 
-    console.log(`[Token Service] 🔄 Fetching tokens from DexScreener for chain ${chainId}...`);
-    
     const tokenMap = new Map<string, TokenInfo>();
     
     // Fetch multiple pages to get comprehensive coverage
@@ -327,7 +310,6 @@ async function fetchDexScreenerTokens(chainId: number): Promise<TokenInfo[]> {
         // Handle null/empty responses
         if (!pairs || pairs.length === 0) {
           if (page === 1) {
-            console.log(`[Token Service] ⚠️ DexScreener returned no pairs for chain ${chainId} (${chainName})`);
           }
           break;
         }
@@ -388,13 +370,11 @@ async function fetchDexScreenerTokens(chainId: number): Promise<TokenInfo[]> {
           await new Promise(resolve => setTimeout(resolve, 200));
         }
       } catch (pageError) {
-        console.warn(`[Token Service] ⚠️ DexScreener page ${page} failed for chain ${chainId}:`, pageError);
         break;
       }
     }
 
     const tokens = Array.from(tokenMap.values());
-    console.log(`[Token Service] ✅ DexScreener: ${tokens.length} tokens for chain ${chainId}`);
     return tokens;
   } catch (error) {
     console.error(`[Token Service] ❌ DexScreener error for chain ${chainId}:`, error);
@@ -411,11 +391,8 @@ export async function fetchTokensForChain(chainId: number): Promise<TokenInfo[]>
   const cached = tokenCache.get(chainId);
   const cachedTime = cacheTimestamp.get(chainId);
   if (cached && cachedTime && Date.now() - cachedTime < CACHE_DURATION) {
-    console.log(`[Token Service] ⚡ Returning cached tokens for chain ${chainId}: ${cached.length}`);
     return cached;
   }
-
-  console.log(`[Token Service] 🚀 Fetching tokens for chain ${chainId} from multiple sources...`);
 
   // Fetch from all sources in parallel
   const [oneinchTokens, uniswapTokens, paraswapTokens, lifiTokens, dexscreenerTokens] = await Promise.all([
@@ -455,7 +432,6 @@ export async function fetchTokensForChain(chainId: number): Promise<TokenInfo[]>
   tokenCache.set(chainId, allTokens);
   cacheTimestamp.set(chainId, Date.now());
 
-  console.log(`[Token Service] ✅ Total unique tokens for chain ${chainId}: ${allTokens.length}`);
   return allTokens;
 }
 
@@ -515,9 +491,7 @@ export async function searchTokens(query: string, chainId?: number): Promise<Tok
       }
     });
     
-    console.log(`[Token Service] ✅ DexScreener search: ${dexscreenerResults.length} tokens for "${query}"`);
   } catch (error) {
-    console.warn(`[Token Service] ⚠️ DexScreener search failed:`, error);
   }
   
   // Then, search cached tokens from other sources
@@ -625,6 +599,5 @@ function getChainKey(chainId: number): keyof typeof TOKEN_LISTS.uniswap {
 export function clearTokenCache(): void {
   tokenCache.clear();
   cacheTimestamp.clear();
-  console.log("[Token Service] Token cache cleared");
 }
 

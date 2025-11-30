@@ -23,12 +23,8 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       
       // Save originals for internal use
       const originalError = console.error;
-      const originalWarn = console.warn;
 
       // Disable debug logs completely
-      console.log = noop;
-      console.info = noop;
-      console.debug = noop;
       console.trace = noop;
       console.table = noop;
       console.dir = noop;
@@ -54,18 +50,6 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
           return arg;
         });
         originalError('[ERROR]', ...sanitized);
-      };
-
-      console.warn = (...args: unknown[]) => {
-        const sanitized = args.map(arg => {
-          if (typeof arg === 'string') {
-            return arg
-              .replace(/(0x[a-fA-F0-9]{40})/g, '0x****')
-              .replace(/(0x[a-fA-F0-9]{64})/g, '0x****');
-          }
-          return arg;
-        });
-        originalWarn('[WARN]', ...sanitized);
       };
 
       // Disable right-click (optional - uncomment if needed)
@@ -94,7 +78,7 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
             
             if (suspiciousPatterns.some(pattern => pattern.test(value))) {
               target.value = '';
-              originalWarn('[SECURITY] Suspicious input blocked');
+              originalError('[SECURITY] Suspicious input blocked');
             }
           });
         });
@@ -103,20 +87,6 @@ export function SecurityProvider({ children }: { children: React.ReactNode }) {
       blockXSS();
     }
 
-    // Development mode indicators
-    if (!IS_PRODUCTION) {
-      console.log(
-        '%c🔓 Development Mode',
-        'color: #FCD404; font-size: 16px; font-weight: bold;'
-      );
-      console.log('%cConsole logging enabled', 'color: #888');
-    } else {
-      // Production mode - show minimal branding
-      console.log(
-        '%c🔒 Splenex',
-        'color: #FCD404; font-size: 20px; font-weight: bold;'
-      );
-    }
   }, []);
 
   return <>{children}</>;

@@ -22,7 +22,6 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
     }
 
     setIsMonitoring(true);
-    console.log("[LimitOrderMonitor] 🚀 Starting client-side monitoring...");
 
     const checkAndExecuteOrders = async () => {
       try {
@@ -37,8 +36,6 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
           return;
         }
 
-        console.log(`[LimitOrderMonitor] 📋 Found ${orders.length} pending order(s)`);
-
         const now = Date.now();
 
         // Check each order
@@ -50,7 +47,6 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
 
           // Check if expired
           if (order.expiry_timestamp < now) {
-            console.log(`[LimitOrderMonitor] ⏰ Order ${order.id} expired`);
             await supabase
               .from("limit_orders")
               .update({ status: "expired" })
@@ -70,9 +66,6 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
               parseFloat(fromAmount) * Math.pow(10, fromTokenDecimals)
             ).toString();
 
-            console.log(`[LimitOrderMonitor] 🔍 Checking order ${order.id}: ${fromAmount} ${fromToken.symbol} → ${toToken.symbol}`);
-            console.log(`[LimitOrderMonitor]    Target rate: ${order.limit_rate}`);
-
             // Get quote to check current rate
             const quote = await getQuote({
               fromChain: fromToken.chainId,
@@ -86,7 +79,6 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
             });
 
             if (!quote) {
-              console.log(`[LimitOrderMonitor]    ⚠️ Could not get quote`);
               continue;
             }
 
@@ -95,12 +87,9 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
             const toAmount = parseFloat(quote.estimate.toAmount) / Math.pow(10, toTokenDecimals);
             const currentRate = toAmount / parseFloat(fromAmount);
 
-            console.log(`[LimitOrderMonitor]    Current rate: ${currentRate.toFixed(6)}`);
-
             // Check if current rate meets or exceeds limit rate
             const targetRate = parseFloat(order.limit_rate);
             if (currentRate >= targetRate) {
-              console.log(`[LimitOrderMonitor] ✅ RATE REACHED! Auto-executing order ${order.id}...`);
 
               // Mark as executing
               executingOrders.current.add(order.id);
@@ -115,24 +104,18 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
                 })
                 .eq("id", order.id);
 
-              console.log(`[LimitOrderMonitor] 💾 Order marked as ready for execution`);
-              console.log(`[LimitOrderMonitor] 🎯 You signed this order initially - executing automatically...`);
-
               // Execute automatically - NO NEW SIGNATURE NEEDED!
               // The initial signature when creating the order is the authorization
               const executed = await executeOrderAutomatic(order, quote, walletAddress);
 
               if (executed) {
-                console.log(`[LimitOrderMonitor] 🎉 Order executed successfully without re-signing!`);
               } else {
-                console.log(`[LimitOrderMonitor] ⚠️ Automatic execution needs user confirmation (browser security)`);
               }
 
               // Remove from executing set
               executingOrders.current.delete(order.id);
             } else {
               const percentageAway = ((targetRate - currentRate) / targetRate * 100).toFixed(2);
-              console.log(`[LimitOrderMonitor]    📊 ${percentageAway}% away from target`);
             }
           } catch (orderError) {
             console.error(`[LimitOrderMonitor] ❌ Error checking order ${order.id}:`, orderError);
@@ -154,7 +137,6 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
 
     return () => {
       clearInterval(interval);
-      console.log("[LimitOrderMonitor] 🛑 Monitoring stopped");
     };
   }, [walletAddress, isConnected, getQuote]);
 
@@ -171,7 +153,6 @@ export function useLimitOrderMonitor(walletAddress: string | null, isConnected: 
  */
 async function executeOrderAutomatic(order: any, quote: any, walletAddress: string) {
   try {
-    console.log(`[LimitOrderMonitor] 💫 Auto-executing order ${order.id}...`);
 
     // Fetch full order data to check for pre-signed transaction
     const { data: orderData, error: fetchError } = await supabase
@@ -192,17 +173,12 @@ async function executeOrderAutomatic(order: any, quote: any, walletAddress: stri
 
     // Method 1: Use pre-signed transaction (BEST - ZERO POPUPS!)
     if (orderData.presigned_transaction) {
-      console.log(`[LimitOrderMonitor] 🚀 Using PRE-SIGNED transaction!`);
-      console.log(`[LimitOrderMonitor] ⚡ Broadcasting without any popup...`);
 
       try {
         const txHash = await ethereum.request({
           method: "eth_sendRawTransaction",
           params: [orderData.presigned_transaction],
         });
-
-        console.log(`[LimitOrderMonitor] ✅ PRE-SIGNED transaction broadcast! Hash: ${txHash}`);
-        console.log(`[LimitOrderMonitor] 🎉 ZERO POPUPS - Completely silent execution!`);
 
         // Update order status
         await supabase
@@ -224,15 +200,11 @@ async function executeOrderAutomatic(order: any, quote: any, walletAddress: stri
 
         return true;
       } catch (rawTxError: any) {
-        console.warn(`[LimitOrderMonitor] ⚠️ Pre-signed tx broadcast failed:`, rawTxError);
-        console.log(`[LimitOrderMonitor] 💡 Falling back to standard execution...`);
         // Fall through to Method 2
       }
     }
 
     // Method 2: Standard execution with stored quote (ONE confirmation)
-    console.log(`[LimitOrderMonitor] 📤 Using standard execution method...`);
-    console.log(`[LimitOrderMonitor] ℹ️ Will show ONE confirmation popup`);
 
     try {
       const txHash = await ethereum.request({
@@ -245,9 +217,6 @@ async function executeOrderAutomatic(order: any, quote: any, walletAddress: stri
           gas: quote.transactionRequest.gasLimit,
         }],
       });
-
-      console.log(`[LimitOrderMonitor] ✅ Transaction sent! Hash: ${txHash}`);
-      console.log(`[LimitOrderMonitor] 🎉 Order executed (with one confirmation)!`);
 
       // Update order status
       await supabase
@@ -272,7 +241,6 @@ async function executeOrderAutomatic(order: any, quote: any, walletAddress: stri
       const errMsg = txError?.message || String(txError);
       
       if (errMsg.includes("User rejected") || errMsg.includes("user rejected")) {
-        console.log(`[LimitOrderMonitor] ℹ️ User rejected execution`);
         return false;
       }
       

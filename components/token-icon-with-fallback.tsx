@@ -92,26 +92,39 @@ export function TokenIconWithFallback({
       urls.push(logoURI);
     }
 
-    // Priority 2: DexScreener CDN (always try this)
+    // Priority 2: DexScreener CDN (always try this) - supports many chains
     const dexChainMap: { [key: number]: string } = {
       1: "ethereum", 56: "bsc", 137: "polygon", 42161: "arbitrum",
       10: "optimism", 8453: "base", 43114: "avalanche", 250: "fantom",
       100: "gnosis", 324: "zksync", 59144: "linea", 534352: "scroll",
+      1101: "polygon-zkevm", 5000: "mantle", 81457: "blast", 34443: "mode",
+      204: "opbnb", 1285: "moonriver", 1284: "moonbeam", 25: "cronos",
+      42220: "celo", 1313161554: "aurora", 1088: "metis", 122: "fuse",
+      8217: "klaytn", 2020: "ronin",
     };
     const dexChain = dexChainMap[chainId];
-    if (dexChain) {
+    if (dexChain && addressLower && addressLower.length === 42) {
       urls.push(`https://dd.dexscreener.com/ds-data/tokens/${dexChain}/${addressLower}.png`);
     }
 
-    // Priority 3: TrustWallet Assets (always try this)
+    // Priority 3: TrustWallet Assets (always try this) - supports many chains
     const twChainMap: { [key: number]: string } = {
       1: "ethereum", 56: "smartchain", 137: "polygon", 42161: "arbitrum",
       10: "optimism", 8453: "base", 43114: "avalanchec", 250: "fantom",
       100: "xdai", 324: "zksync", 59144: "linea", 534352: "scroll",
+      1101: "polygonzkevm", 5000: "mantle", 81457: "blast", 34443: "mode",
+      204: "opbnb", 1285: "moonriver", 1284: "moonbeam", 25: "cronos",
+      42220: "celo", 1313161554: "aurora", 1088: "metis", 122: "fuse",
+      8217: "klaytn", 2020: "ronin",
     };
     const twChain = twChainMap[chainId];
-    if (twChain) {
+    if (twChain && addressLower && addressLower.length === 42) {
       urls.push(`https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/${twChain}/assets/${addressLower}/logo.png`);
+    }
+
+    // Priority 4: DeFi Llama icons (universal fallback for any chain)
+    if (addressLower && addressLower.length === 42 && chainId) {
+      urls.push(`https://icons.llamao.fi/icons/tokens/${chainId}/${addressLower}`);
     }
 
     return urls.filter(url => url && url.startsWith('http'));
@@ -227,7 +240,7 @@ export function TokenIconWithFallback({
         src={currentImageUrl}
         alt={symbol || 'Token'}
         className={`${className} transition-all duration-300`}
-        style={{ opacity: 1 }}
+        style={{ opacity: 1, width: size, height: size }}
         onError={() => {
           // If image fails after loading, try next URL
           const allUrls = getAllLogoURLs();

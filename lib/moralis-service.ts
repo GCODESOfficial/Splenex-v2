@@ -13,6 +13,7 @@ export interface MoralisTokenBalance {
   usd_value?: number
   native_token?: boolean
   possible_spam?: boolean
+  verified_contract?: boolean
 }
 
 export interface MoralisResponse {
@@ -127,14 +128,11 @@ class MoralisService {
             const data = await response.json()
             if (data[addressLower]?.usd) {
               const price = data[addressLower].usd
-              console.log(`[Moralis] ✅ CoinGecko price by address for ${symbol} (${addressLower}): $${price}`)
               return price
             }
           } else {
-            console.warn(`[Moralis] CoinGecko address lookup failed: ${response.status} for ${symbol}`)
           }
         } catch (e) {
-          console.warn(`[Moralis] CoinGecko address lookup error for ${symbol}:`, e)
           // Continue to symbol-based lookup
         }
       }
@@ -177,7 +175,6 @@ class MoralisService {
           if (response.ok) {
             const data = await response.json()
             if (data[coinId]?.usd) {
-              console.log(`[Moralis] ✅ CoinGecko price by symbol for ${symbol}: $${data[coinId].usd}`)
               return data[coinId].usd
             }
           }
@@ -213,7 +210,6 @@ class MoralisService {
             if (priceResponse.ok) {
               const priceData = await priceResponse.json()
               if (priceData[matchingCoin.id]?.usd) {
-                console.log(`[Moralis] ✅ CoinGecko price via search for ${symbol}: $${priceData[matchingCoin.id].usd}`)
                 return priceData[matchingCoin.id].usd
               }
             }
@@ -225,7 +221,6 @@ class MoralisService {
       
       return 0
     } catch (error) {
-      console.warn(`[Moralis] Error fetching CoinGecko price for ${symbol}:`, error)
       return 0
     }
   }
@@ -246,13 +241,19 @@ class MoralisService {
       balance = Number(quotient) + Number(remainder) / Number(divisor)
     }
     
+    // STRICT CHECK: If balance is 0 or negative, this token shouldn't be included
+    // (This is a safety check - tokens with 0 balance should already be filtered)
+    if (balance <= 0) {
+      // Return token with 0 balance - will be filtered out in finalTokens
+      balance = 0
+    }
+    
     // Extract USD values from Moralis response
     let usdPrice = moralisToken.usd_price || 0
     let usdValue = moralisToken.usd_value || 0
     
     // ALWAYS fetch from CoinGecko to ensure accuracy, especially for non-native tokens
     // This ensures all tokens have accurate prices and USD values
-    console.log(`[Moralis] 🔍 Fetching price for ${moralisToken.symbol} from CoinGecko for accuracy...`)
     const coingeckoPrice = await this.fetchPriceFromCoinGecko(
       moralisToken.token_address,
       moralisToken.symbol,
@@ -263,24 +264,19 @@ class MoralisService {
       // Use CoinGecko price as primary source (more reliable)
       usdPrice = coingeckoPrice
       usdValue = balance * usdPrice
-      console.log(`[Moralis] ✅ Using CoinGecko price for ${moralisToken.symbol}: $${usdPrice.toFixed(6)} → USD Value $${usdValue.toFixed(2)}`)
     } else if (usdPrice > 0 && usdValue > 0) {
       // CoinGecko failed, use Moralis values but verify calculation
       const calculatedValue = balance * usdPrice
       // If Moralis USD value doesn't match calculated value, use calculated
       const valueDifference = Math.abs(calculatedValue - usdValue)
       if (valueDifference > 0.01) { // More than 1 cent difference
-        console.log(`[Moralis] ⚠️ Moralis USD value mismatch for ${moralisToken.symbol}: Using calculated value (${usdValue.toFixed(2)} vs ${calculatedValue.toFixed(2)})`)
         usdValue = calculatedValue
       }
-      console.log(`[Moralis] ℹ️ Using Moralis price for ${moralisToken.symbol}: $${usdPrice.toFixed(6)} → USD Value $${usdValue.toFixed(2)}`)
     } else {
       // Both failed, try to calculate from price if we have one
       if (usdPrice > 0) {
         usdValue = balance * usdPrice
-        console.log(`[Moralis] ⚠️ Calculated USD value for ${moralisToken.symbol} from price: $${usdValue.toFixed(2)}`)
       } else {
-        console.warn(`[Moralis] ❌ Could not determine price for ${moralisToken.symbol}, leaving as 0`)
       }
     }
     
@@ -304,16 +300,18 @@ class MoralisService {
     walletAddress: string, 
     chainName: string
   ): Promise<TokenBalance[]> {
+    // Re-check API key on each call (in case env var was updated)
+    this.apiKey = process.env.MORALIS_API_KEY || null
+    
     if (!this.apiKey) {
       console.error('[Moralis] ❌ API key not configured - returning empty result')
-      console.error('[Moralis] Please set MORALIS_API_KEY environment variable')
-      throw new Error('Moralis API key not configured')
+      console.error('[Moralis] Please set MORALIS_API_KEY environment variable in your .env file')
+      console.error('[Moralis] Make sure the .env file is in the Splenex directory and restart the dev server')
+      throw new Error('Moralis API key not configured. Please set MORALIS_API_KEY in your .env file and restart the server.')
     }
 
     try {
       const moralisChain = this.getMoralisChainName(chainName)
-      
-      console.log(`[Moralis] 📡 Fetching token balances for ${walletAddress} on ${moralisChain}`)
 
       // Fetch all tokens with pagination (exclude_spam=false to get all tokens)
       let allTokens: MoralisTokenBalance[] = []
@@ -322,14 +320,15 @@ class MoralisService {
       const pageSize = 100
       
       do {
-        let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/tokens?chain=${moralisChain}&limit=${pageSize}&exclude_spam=false`
+        // STRICT FILTERING: Only fetch verified tokens with balances
+        // exclude_spam=true: Exclude spam tokens
+        // exclude_unverified_contracts=true: Only include verified contracts
+        // This ensures we only get tokens that are actually legitimate and in the wallet
+        let url = `https://deep-index.moralis.io/api/v2.2/wallets/${walletAddress}/tokens?chain=${moralisChain}&limit=${pageSize}&exclude_spam=true&exclude_unverified_contracts=true`
         if (cursor) {
           url += `&cursor=${cursor}`
         }
-        
-        console.log(`[Moralis] 📄 Fetching page ${page}...`)
-        console.log(`[Moralis] API URL: ${url}`)
-        
+
         const response = await fetch(url, {
           method: 'GET',
           headers: {
@@ -338,19 +337,28 @@ class MoralisService {
           }
         })
 
-        console.log(`[Moralis] Response status: ${response.status}`)
-
         if (!response.ok) {
           const errorText = await response.text().catch(() => 'Unknown error')
           console.error(`[Moralis] ❌ API request failed: ${response.status} - ${errorText}`)
-          throw new Error(`Moralis API failed: ${response.status}`)
+          
+          // Handle specific error cases
+          if (response.status === 401) {
+            throw new Error('Moralis API key is invalid or expired')
+          } else if (response.status === 429) {
+            throw new Error('Moralis API rate limit exceeded. Please try again later.')
+          } else if (response.status === 400) {
+            // Bad request - might be invalid address or chain
+            console.error(`[Moralis] Bad request for ${walletAddress} on ${moralisChain}`)
+            return [] // Return empty array instead of throwing
+          } else {
+            throw new Error(`Moralis API failed: ${response.status} - ${errorText}`)
+          }
         }
 
         const data: MoralisResponse = await response.json()
         
         if (data.result && data.result.length > 0) {
           allTokens.push(...data.result)
-          console.log(`[Moralis] ✅ Page ${page}: Fetched ${data.result.length} tokens (Total: ${allTokens.length})`)
         }
         
         cursor = data.cursor
@@ -362,25 +370,60 @@ class MoralisService {
         }
         
       } while (cursor)
-      
-      console.log(`[Moralis] ✅ Completed pagination: ${allTokens.length} total tokens from ${page - 1} page(s)`)
 
       if (allTokens.length === 0) {
-        console.log(`[Moralis] ℹ️ No tokens found for ${walletAddress} on ${moralisChain}`)
         return []
       }
 
+      // Only keep verified / recognized tokens with actual balances
+      // STRICT FILTERING: Only verified tokens that actually have balance > 0
+      const tokensWithBalance = allTokens.filter((token: MoralisTokenBalance) => {
+        // Check if token has actual balance first
+        // Moralis returns balance as raw string (in wei) - check if it's > 0
+        const rawBalance = token.balance || '0'
+        const balanceBigInt = BigInt(rawBalance)
+        
+        // If balance is 0, don't include
+        if (balanceBigInt === 0n) {
+          return false
+        }
+
+        // Native tokens are always included if they have balance
+        if (token.native_token) {
+          return true
+        }
+
+        // For ERC20 tokens, must be:
+        // 1. Not spam
+        // 2. Verified contract
+        // 3. Has balance > 0 (already checked above)
+        const notSpam = token.possible_spam !== true
+        const verified = token.verified_contract === true
+        
+        if (!notSpam || !verified) {
+          return false // Filter out unverified or spam tokens
+        }
+        
+        return true
+      })
+
       // Convert to our format (with async price fetching)
-      const tokenPromises = allTokens
-        .filter((token: MoralisTokenBalance) => parseFloat(token.balance || '0') > 0)
-        .map((token: MoralisTokenBalance) => this.convertTokenBalance(token, chainName))
+      const tokenPromises = tokensWithBalance.map((token: MoralisTokenBalance) => 
+        this.convertTokenBalance(token, chainName)
+      )
       
       const tokens = await Promise.all(tokenPromises)
 
-      console.log(`[Moralis] ✅ Returning ${tokens.length} tokens (all tokens with balance > 0)`)
-      console.log(`[Moralis] 📋 Token list:`, tokens.map((t: TokenBalance) => `${t.symbol} (${t.balance}) = $${t.usdValue.toFixed(2)} @ $${t.price.toFixed(6)}`))
-      
-      return tokens
+      // STRICT FILTER: Only return tokens that actually have balance > 0
+      // This ensures we only show tokens that are actually in the wallet
+      const finalTokens = tokens.filter((token) => {
+        const balance = parseFloat(token.balance)
+        // Only include tokens with actual balance > 0
+        // Use a very small threshold to filter out dust (0.00000001)
+        return balance > 0.00000001
+      })
+
+      return finalTokens
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
